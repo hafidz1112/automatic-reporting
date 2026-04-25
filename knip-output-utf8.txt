@@ -1,0 +1,208 @@
+﻿Unused files (108)
+components/file-uploader.tsx                               
+components/form-card-skeleton.tsx                          
+components/github-stars-button.tsx                         
+components/nav-main.tsx                                    
+components/nav-projects.tsx                                
+components/nav-user.tsx                                    
+components/org-switcher.tsx                                
+constants/mock-api-users.ts                                
+config/data-table.ts                                       
+config/infoconfig.ts                                       
+hooks/use-callback-ref.tsx                                 
+hooks/use-controllable-state.tsx                           
+hooks/use-debounce.tsx                                     
+hooks/use-debounced-callback.ts                            
+lib/api-client.ts                                          
+lib/auth-client.ts                                         
+lib/compose-refs.ts                                        
+lib/format.ts                                              
+lib/parsers.ts                                             
+lib/searchparams.ts                                        
+styles/globals.css                                         
+components/layout/user-nav.tsx                             
+components/modal/alert-modal.tsx                           
+components/themes/font.config.ts                           
+components/ui/accordion.tsx                                
+components/ui/alert-dialog.tsx                             
+components/ui/aspect-ratio.tsx                             
+components/ui/button-group.tsx                             
+components/ui/calendar.tsx                                 
+components/ui/checkbox.tsx                                 
+components/ui/command.tsx                                  
+components/ui/context-menu.tsx                             
+components/ui/dialog.tsx                                   
+components/ui/drawer.tsx                                   
+components/ui/field.tsx                                    
+components/ui/file-preview.tsx                             
+components/ui/frame.tsx                                    
+components/ui/hover-card.tsx                               
+components/ui/input-group.tsx                              
+components/ui/input-otp.tsx                                
+components/ui/kanban.tsx                                   
+components/ui/menubar.tsx                                  
+components/ui/modal.tsx                                    
+components/ui/navigation-menu.tsx                          
+components/ui/pagination.tsx                               
+components/ui/progress.tsx                                 
+components/ui/radio-group.tsx                              
+components/ui/resizable.tsx                                
+components/ui/slider.tsx                                   
+components/ui/sonner.tsx                                   
+components/ui/switch.tsx                                   
+components/ui/tabs.tsx                                     
+components/ui/toggle-group.tsx                             
+components/ui/toggle.tsx                                   
+features/react-query-demo/info-content.ts                  
+features/users/info-content.ts                             
+features/auth/components/github-auth-button.tsx            
+features/auth/components/interactive-grid.tsx              
+features/auth/components/sign-in-view.tsx                  
+features/auth/components/sign-up-view.tsx                  
+features/auth/components/user-auth-form.tsx                
+features/chat/components/chat-area.tsx                     
+features/chat/components/chat-header.tsx                   
+features/chat/components/chat-view-page.tsx                
+features/chat/components/conversation-list.tsx             
+features/chat/components/conversation-select.tsx           
+features/chat/components/message-bubble.tsx                
+features/chat/components/message-composer.tsx              
+features/chat/components/messenger.tsx                     
+features/elements/components/icons-view-page.tsx           
+features/chat/utils/data.ts                                
+features/chat/utils/store.ts                               
+features/chat/utils/types.ts                               
+features/forms/components/advanced-form-patterns.tsx       
+features/forms/components/forms-showcase-page.tsx          
+features/forms/components/multi-step-product-form.tsx      
+features/forms/components/sheet-form-demo.tsx              
+features/forms/components/sheet-product-form.tsx           
+features/kanban/utils/restrict-to-container.ts             
+features/kanban/utils/store.ts                             
+features/kanban/components/board-column.tsx                
+features/kanban/components/kanban-board.tsx                
+features/kanban/components/kanban-view-page.tsx            
+features/kanban/components/new-task-dialog.tsx             
+features/kanban/components/task-card.tsx                   
+features/notifications/components/notifications-page.tsx   
+features/overview/components/overview.tsx                  
+features/products/components/product-listing.tsx           
+features/react-query-demo/api/queries.ts                   
+features/react-query-demo/components/pokemon-info.tsx      
+features/react-query-demo/components/pokemon-skeleton.tsx  
+features/profile/components/profile-view-page.tsx          
+features/profile/utils/form-schema.ts                      
+features/users/components/user-form-sheet.tsx              
+features/users/components/user-listing.tsx                 
+features/users/schemas/user.ts                             
+features/users/api/mutations.ts                            
+features/users/api/queries.ts                              
+features/users/api/service.ts                              
+features/users/api/types.ts                                
+features/products/components/product-tables/cell-action.tsx
+features/products/components/product-tables/columns.tsx    
+features/products/components/product-tables/index.tsx      
+features/products/components/product-tables/options.tsx    
+features/users/components/users-table/cell-action.tsx      
+features/users/components/users-table/columns.tsx          
+features/users/components/users-table/index.tsx            
+features/users/components/users-table/options.tsx          
+Unused dependencies (1)
+dotenv  package.json:22:6
+Unused devDependencies (1)
+tsx  package.json:49:6
+Unlisted dependencies (22)
+postcss                        postcss.config.mjs                                     
+@radix-ui/react-slot           components/ui/button.tsx:2:22                          
+@radix-ui/react-slot           components/ui/infobar.tsx:17:22                        
+@radix-ui/react-slot           components/ui/sidebar.tsx:4:22                         
+@radix-ui/react-slot           components/ui/badge.tsx:2:22                           
+@tanstack/react-query          features/products/api/queries.ts:1:30                  
+@tanstack/react-query          features/products/components/product-view-page.tsx:3:34
+@tanstack/react-query          app/admin/dashboard/product/[productId]/page.tsx:1:46  
+@radix-ui/react-collapsible    components/ui/collapsible.tsx:3:39                     
+@radix-ui/react-dropdown-menu  components/ui/dropdown-menu.tsx:4:40                   
+@radix-ui/react-dialog         components/ui/sheet.tsx:4:33                           
+@radix-ui/react-tooltip        components/ui/tooltip.tsx:4:35                         
+@radix-ui/react-scroll-area    components/ui/scroll-area.tsx:4:38                     
+@radix-ui/react-avatar         components/ui/avatar.tsx:4:34                          
+zod                            features/products/components/product-form.tsx:11:20    
+@tanstack/react-query          features/products/components/product-form.tsx:8:29     
+sonner                         features/products/components/product-form.tsx:10:23    
+@radix-ui/react-slot           components/ui/breadcrumb.tsx:2:22                      
+@radix-ui/react-select         components/ui/select.tsx:4:34                          
+@radix-ui/react-popover        components/ui/popover.tsx:4:35                         
+@tanstack/react-query          features/products/api/mutations.ts:1:33                
+zod                            features/products/schemas/product.ts:1:20              
+Unresolved imports (3)
+@/lib/query-client             app/admin/dashboard/product/[productId]/page.tsx:2:32
+@/components/ui/tanstack-form  features/products/components/product-form.tsx:3:43   
+@/lib/query-client             features/products/api/mutations.ts:2:32              
+Unused exports (51)
+buttonVariants                      components/ui/button.tsx:101:18         
+InfobarFooter                       components/ui/infobar.tsx:744:3         
+InfobarGroupAction                  components/ui/infobar.tsx:746:3         
+InfobarGroupLabel                   components/ui/infobar.tsx:748:3         
+InfobarInput                        components/ui/infobar.tsx:750:3         
+InfobarInset                        components/ui/infobar.tsx:751:3         
+InfobarMenu                         components/ui/infobar.tsx:752:3         
+InfobarMenuAction                   components/ui/infobar.tsx:753:3         
+InfobarMenuBadge                    components/ui/infobar.tsx:754:3         
+InfobarMenuButton                   components/ui/infobar.tsx:755:3         
+InfobarMenuItem                     components/ui/infobar.tsx:756:3         
+InfobarMenuSkeleton                 components/ui/infobar.tsx:757:3         
+InfobarMenuSub                      components/ui/infobar.tsx:758:3         
+InfobarMenuSubButton                components/ui/infobar.tsx:759:3         
+InfobarMenuSubItem                  components/ui/infobar.tsx:760:3         
+InfobarSeparator                    components/ui/infobar.tsx:763:3         
+SidebarGroupAction                  components/ui/sidebar.tsx:673:3         
+SidebarGroupContent                 components/ui/sidebar.tsx:674:3         
+SidebarInput                        components/ui/sidebar.tsx:677:3         
+SidebarMenuAction                   components/ui/sidebar.tsx:680:3         
+SidebarMenuBadge                    components/ui/sidebar.tsx:681:3         
+SidebarMenuSkeleton                 components/ui/sidebar.tsx:684:3         
+SidebarSeparator                    components/ui/sidebar.tsx:690:3         
+useSidebar                          components/ui/sidebar.tsx:692:3         
+badgeVariants                       components/ui/badge.tsx:39:17           
+TableFooter                         components/ui/table.tsx:92:41           
+TableCaption                        components/ui/table.tsx:92:86           
+productsQueryOptions                features/products/api/queries.ts:13:14  
+useFilteredNavItems       function  hooks/use-nav.ts:20:17                  
+DropdownMenuPortal                  components/ui/dropdown-menu.tsx:214:3   
+DropdownMenuCheckboxItem            components/ui/dropdown-menu.tsx:220:3   
+DropdownMenuRadioGroup              components/ui/dropdown-menu.tsx:221:3   
+DropdownMenuRadioItem               components/ui/dropdown-menu.tsx:222:3   
+DropdownMenuShortcut                components/ui/dropdown-menu.tsx:224:3   
+DropdownMenuSub                     components/ui/dropdown-menu.tsx:225:3   
+DropdownMenuSubTrigger              components/ui/dropdown-menu.tsx:226:3   
+DropdownMenuSubContent              components/ui/dropdown-menu.tsx:227:3   
+SheetTrigger                        components/ui/sheet.tsx:123:3           
+SheetClose                          components/ui/sheet.tsx:124:3           
+SheetFooter                         components/ui/sheet.tsx:127:3           
+ScrollBar                           components/ui/scroll-area.tsx:56:22     
+ChartLegend                         components/ui/chart.tsx:322:3           
+ChartLegendContent                  components/ui/chart.tsx:323:3           
+ChartStyle                          components/ui/chart.tsx:324:3           
+BreadcrumbEllipsis                  components/ui/breadcrumb.tsx:101:3      
+SelectScrollDownButton              components/ui/select.tsx:165:3          
+SelectScrollUpButton                components/ui/select.tsx:166:3          
+SelectSeparator                     components/ui/select.tsx:167:3          
+KbdGroup                            components/ui/kbd.tsx:26:15             
+PopoverAnchor                       components/ui/popover.tsx:42:51         
+deleteProductMutation               features/products/api/mutations.ts:22:14
+Unused exported types (14)
+HelpfulLink                  type       components/ui/infobar.tsx:28:13           
+DescriptiveSection           type       components/ui/infobar.tsx:33:13           
+Icon                         type       components/icons.tsx:93:13                
+Product                      type       features/products/api/queries.ts:5:15     
+PermissionCheck              interface  types/index.ts:3:18                       
+NavItemWithChildren          interface  types/index.ts:30:18                      
+NavItemWithOptionalChildren  interface  types/index.ts:34:18                      
+FooterItem                   interface  types/index.ts:38:18                      
+MainNavItem                  type       types/index.ts:47:13                      
+SidebarNavItem               type       types/index.ts:49:13                      
+ActionType                   type       components/ui/notification-card.tsx:8:13  
+ActionStyle                  type       components/ui/notification-card.tsx:9:13  
+NotificationCardProps        interface  components/ui/notification-card.tsx:19:18 
+Notification                 type       features/notifications/utils/store.ts:5:13
+Configuration hints (1)
