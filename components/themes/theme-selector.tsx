@@ -2,6 +2,7 @@
 
 import { useThemeConfig } from '@/components/themes/active-theme';
 import { Label } from '@/components/ui/label';
+import { ThemeModeToggle } from './theme-mode-toggle';
 import {
   Select,
   SelectContent,
@@ -21,9 +22,11 @@ export function ThemeSelector() {
 
   return (
     <div className='flex items-center gap-2'>
-      <Label htmlFor='theme-selector' className='sr-only'>
-        Theme
-      </Label>
+      <ThemeModeToggle />
+      <div className='hidden sm:flex items-center gap-2'>
+        <Label htmlFor='theme-selector' className='sr-only'>
+          Theme
+        </Label>
       <Select value={activeTheme} onValueChange={setActiveTheme}>
         <SelectTrigger
           id='theme-selector'
@@ -51,6 +54,7 @@ export function ThemeSelector() {
           )}
         </SelectContent>
       </Select>
+      </div>
     </div>
   );
 }

@@ -34,6 +34,14 @@ export const navGroups: NavGroup[] = [
         shortcut: ["p", "p"],
         isActive: false,
         items: []
+      },
+      {
+        title: "WhatsApp",
+        url: "/admin/dashboard/whatsapp",
+        icon: "chat",
+        shortcut: ["w", "a"],
+        isActive: false,
+        items: []
       }
     ]
   }

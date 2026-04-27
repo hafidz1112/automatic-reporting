@@ -1,226 +1,223 @@
 "use client"
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from 'react';
+import { useRouter } from "next/navigation";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-hot-toast";
 import { Button } from '@/components/ui/button';
-import { 
-  TrendingUp, 
-  CheckSquare, 
-  AlertCircle, 
-  Package, 
-  AlertTriangle, 
-  MessageSquare, 
-  Plus, 
-  ArrowLeft, 
-  Send 
-} from 'lucide-react';
+import { Send, Loader2, LogOut } from 'lucide-react';
 import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
+import { reportSchema, ReportFormValues } from "@/lib/validations/report";
+import { SalesCard } from "@/components/input-data/sales-card";
+import { DistributionCard } from "@/components/input-data/distribution-card";
+import { OosCard } from "@/components/input-data/oos-card";
+import { StockCard } from "@/components/input-data/stock-card";
+import { ShrinkageCard } from "@/components/input-data/shrinkage-card";
+import { SupportCard } from "@/components/input-data/support-card";
+import { signOut, useSession } from "@/lib/auth-client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+function getInitials(nameOrEmail: string | undefined): string {
+  if (!nameOrEmail) return "U";
+  const clean = nameOrEmail.trim();
+  if (!clean) return "U";
+
+  if (clean.includes("@")) {
+    return clean[0]?.toUpperCase() ?? "U";
+  }
+
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 1).toUpperCase();
+  return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+}
+
 export default function InputDataPage() {
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { data: session } = useSession();
+
+  const methods = useForm<ReportFormValues>({
+    resolver: zodResolver(reportSchema),
+    defaultValues: {
+      salesGroceries: 0,
+      salesLpg: 0,
+      salesPelumas: 0,
+      fulfillmentPb: 0,
+      avgFulfillmentDc: 0,
+      itemOos: [{ name: "" }, { name: "" }, { name: "" }],
+      stockLpg3kg: 0,
+      stockLpg5kg: 0,
+      stockLpg12kg: 0,
+      waste: 0,
+      losses: 0,
+      needSupport: "",
+    },
+  });
+
+  const { handleSubmit, reset } = methods;
+
+  const saveReport = async (values: ReportFormValues, isPushedToWa: boolean) => {
+    const response = await fetch('/api/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...values, isPushedToWa }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Gagal menyimpan laporan');
+    }
+
+    return await response.json();
+  };
+
+  const onSaveDraft = async (values: ReportFormValues) => {
+    setIsSaving(true);
+    const toastId = toast.loading("Menyimpan draft...");
+    try {
+      await saveReport(values, false);
+      toast.success("Draft berhasil disimpan!", { id: toastId });
+      reset();
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onSubmitWA = async (values: ReportFormValues) => {
+    setIsSending(true);
+    const toastId = toast.loading("Menyimpan dan mengirim laporan...");
+    try {
+      const saveResult = await saveReport(values, true);
+      const reportId = saveResult.data.id;
+
+      const waResponse = await fetch('/api/send-wa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId }),
+      });
+
+      if (!waResponse.ok) {
+        throw new Error('Gagal mengirim ke WhatsApp Gateway');
+      }
+
+      toast.success("Laporan berhasil dikirim ke WhatsApp!", { id: toastId });
+      reset();
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const onLogout = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-muted/30 pb-20">
-      {/* Header */}
-      <header className="bg-background border-b px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          {/* Logo Placeholder */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-              P
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-sm tracking-widest text-foreground">PERTAMINA</span>
-              <span className="text-xs text-red-600 font-semibold tracking-widest">RETAIL</span>
-            </div>
-          </div>
-
-          <div className="h-10 w-px bg-border hidden md:block mx-2"></div>
-
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Sales Daily Report</h1>
-            <p className="text-sm text-muted-foreground">Non - Fuel Retail Sales & Operation</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground hidden md:block">
-            Internal Operations System
-          </div>
-          <ThemeModeToggle />
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-6 mt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          
-          {/* Row 1 */}
-          {/* SALES */}
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <TrendingUp className="w-4 h-4" />
-                SALES
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="sales-groceries" className="text-muted-foreground">Sales Groceries (Rp)</Label>
-                <Input id="sales-groceries" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sales-lpg" className="text-muted-foreground">Sales LPG (Rp)</Label>
-                <Input id="sales-lpg" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sales-pelumas" className="text-muted-foreground">Sales Pelumas (Rp)</Label>
-                <Input id="sales-pelumas" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="total-sales" className="text-muted-foreground">Total Sales (Rp)</Label>
-                <Input id="total-sales" placeholder="0" className="bg-muted border-input" readOnly />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* SC & MD */}
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <CheckSquare className="w-4 h-4" />
-                SC & MD
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fulfillment-pb" className="text-muted-foreground">Fulfillment PB Terakhir (%)</Label>
-                <Input id="fulfillment-pb" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="avg-fulfillment-dc" className="text-muted-foreground">Avg Fulfillment DC (%)</Label>
-                <Input id="avg-fulfillment-dc" placeholder="0" className="bg-background border-input" />
-              </div>
-             
-            </CardContent>
-          </Card>
-
-          {/* Row 2 */}
-          {/* ITEM OOS */}
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <AlertCircle className="w-4 h-4" />
-                ITEM OOS
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">OOS Item 1</Label>
-                  <Input placeholder="Nama item" className="bg-background border-input" />
+      <FormProvider {...methods}>
+        <div className="min-h-screen bg-muted/30 pb-32 md:pb-24">
+          <header className="bg-background border-b px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 sticky top-0 z-10">
+            <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                  P
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">OOS Item 2</Label>
-                  <Input placeholder="Nama item" className="bg-background border-input" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">OOS Item 3</Label>
-                  <Input placeholder="Nama item" className="bg-background border-input" />
+                <div className="flex flex-col leading-tight">
+                  <span className="font-bold text-sm tracking-widest text-foreground">PERTAMINA</span>
+                  <span className="text-xs text-red-600 font-semibold tracking-widest">RETAIL</span>
                 </div>
               </div>
+              <div className="h-10 w-px bg-border hidden md:block mx-2"></div>
               <div>
-                <Button variant="outline" className="text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-600 border-red-100 mt-2">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
+                <h1 className="text-lg md:text-xl font-bold text-foreground">Sales Daily Report</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">Non - Fuel Retail Sales & Operation</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center justify-between w-full md:w-auto gap-3 md:gap-4">
+              <div className="text-sm text-muted-foreground hidden md:block">
+                Internal Operations System
+              </div>
+              <div className="flex items-center gap-2 rounded-full border px-2.5 py-1.5 bg-muted/40">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={session?.user?.image ?? ""} alt={session?.user?.name ?? session?.user?.email ?? "User"} />
+                  <AvatarFallback>{getInitials(session?.user?.name ?? session?.user?.email)}</AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:flex flex-col leading-tight">
+                  <span className="text-xs font-medium text-foreground">
+                    {session?.user?.name ?? "User"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {session?.user?.email ?? "Memuat email..."}
+                  </span>
+                </div>
+              </div>
+              <ThemeModeToggle />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onLogout}
+                disabled={isSigningOut}
+                className="gap-2"
+              >
+                {isSigningOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          </header>
 
-          {/* STOCK LPG */}
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <Package className="w-4 h-4" />
-                STOCK LPG
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="lpg-3" className="text-muted-foreground">LPG 3 Kg</Label>
-                <Input id="lpg-3" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lpg-5" className="text-muted-foreground">LPG 5.5 Kg</Label>
-                <Input id="lpg-5" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lpg-12" className="text-muted-foreground">LPG 12 Kg</Label>
-                <Input id="lpg-12" placeholder="0" className="bg-background border-input" />
-              </div>
-            </CardContent>
-          </Card>
+          <main className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6 mt-2 md:mt-4">
+            <form className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <SalesCard />
+              <DistributionCard />
+              <OosCard />
+              <StockCard />
+              <ShrinkageCard />
+              <SupportCard />
+            </form>
+          </main>
 
-          {/* Row 3 */}
-          {/* SHRINKAGE */}
-          <Card className="border-0 shadow-sm rounded-xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <AlertTriangle className="w-4 h-4" />
-                SHRINKAGE
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="waste" className="text-muted-foreground">Waste (Rp)</Label>
-                <Input id="waste" placeholder="0" className="bg-background border-input" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="losses" className="text-muted-foreground">Losses (Rp)</Label>
-                <Input id="losses" placeholder="0" className="bg-background border-input" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* LAINNYA */}
-          <Card className="border-0 shadow-sm rounded-xl h-full">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-red-500 flex items-center gap-2 text-sm font-bold tracking-wide">
-                <MessageSquare className="w-4 h-4" />
-                LAINNYA
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 h-full"> {/* h-full keeps content stretched within bounds */}
-              <div className="space-y-2">
-                <Label htmlFor="need-support" className="text-muted-foreground">Need Support</Label>
-                <Textarea 
-                  id="need-support" 
-                  placeholder="Tuliskan kebutuhan support..." 
-                  className="bg-background border-input min-h-[120px] resize-none" 
-                />
-              </div>
-            </CardContent>
-          </Card>
-
+          <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 md:p-4 z-20">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-4">
+              <Button 
+                variant="secondary" 
+                onClick={handleSubmit(onSaveDraft)}
+                disabled={isSaving || isSending}
+                className="w-full sm:w-auto px-4 md:px-8 bg-muted hover:bg-muted/80 text-foreground rounded-md"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Save Data Saja (Draft)
+              </Button>
+              <Button 
+                onClick={handleSubmit(onSubmitWA)}
+                disabled={isSaving || isSending}
+                className="w-full sm:w-auto px-4 md:px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md border-0"
+              >
+                {isSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                Submit & Send WA
+              </Button>
+            </div>
+          </div>
         </div>
-      </main>
-
-      {/* View Action Bar (Footer) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-20">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-4">
-          <Button variant="secondary" className="px-8 bg-muted hover:bg-muted/80 text-foreground rounded-md">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Kembali
-          </Button>
-          <Button className="px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md border-0">
-            <Send className="w-4 h-4 mr-2" />
-            Submit & Preview
-          </Button>
-        </div>
-      </div>
-    </div>
+      </FormProvider>
     </TooltipProvider>
   );
 }

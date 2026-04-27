@@ -44,5 +44,13 @@ export const THEMES = [
   {
     name: 'WhatsApp',
     value: 'whatsapp'
+  },
+  {
+    name: 'Basic',
+    value: 'basic'
+  },
+  {
+    name: 'Default',
+    value: 'default'
   }
 ];

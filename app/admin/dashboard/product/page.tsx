@@ -22,8 +22,8 @@ export default function ProductsPage() {
           <CardDescription>A detailed list of all products in your inventory.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>

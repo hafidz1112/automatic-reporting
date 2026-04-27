@@ -58,13 +58,13 @@ export default function PageContainer({
   const inner = (
     <div className='flex flex-1 flex-col p-4 md:px-6'>
       {hasHeader && (
-        <div className='bg-background sticky top-0 z-10 mb-4 flex items-start justify-between gap-4 pb-4'>
+        <div className='bg-background sticky top-0 z-10 mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4'>
           <Heading
             title={pageTitle ?? ''}
             description={pageDescription ?? ''}
             infoContent={infoContent}
           />
-          {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}
+          {pageHeaderAction && <div className='shrink-0 w-full sm:w-auto'>{pageHeaderAction}</div>}
         </div>
       )}
       {content}
