@@ -135,13 +135,13 @@ export default function InputDataPage() {
             onLogout={onLogout} 
           />
 
-          <main className="mx-auto mt-1 w-full max-w-7xl px-3 py-4 sm:px-4 md:mt-3 md:px-6 md:py-6 lg:px-8">
+          <main className="mx-auto mt-1 w-full max-w-7xl px-6 py-6 sm:px-4 md:mt-3 md:px-6 md:py-6 lg:px-8">
             <form className="columns-1 lg:columns-2 gap-6 space-y-6">
               <div className="break-inside-avoid"><SalesCard /></div>
               <div className="break-inside-avoid"><StockCard /></div>
-              <div className="break-inside-avoid"><DistributionCard /></div>
-              <div className="break-inside-avoid"><ShrinkageCard /></div>
               <div className="break-inside-avoid"><OosCard /></div>
+              <div className="break-inside-avoid"><ShrinkageCard /></div>
+              <div className="break-inside-avoid"><DistributionCard /></div>
               <div className="break-inside-avoid"><SupportCard /></div>
             </form>
           </main>

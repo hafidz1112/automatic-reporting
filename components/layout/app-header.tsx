@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeModeToggle } from "@/components/themes/theme-mode-toggle";
 import { Loader2, Bell } from "lucide-react";
 import Image from "next/image";
+import Logo from "@/public/Logo_pertamina.png"
 
 function getInitials(nameOrEmail: string | undefined): string {
   if (!nameOrEmail) return "U";
@@ -49,17 +50,21 @@ export function AppHeader({ session, isSigningOut, onLogout }: AppHeaderProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 w-full border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-20 w-full border-b bg-background/95 backdrop-blur p-2">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         
         {/* --- Kiri: Logo & Branding --- */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <div className="flex flex-col items-center">
              {/* Ganti src dengan path logo Pertamina Retail Anda */}
-            <div className="relative w-12 h-8">
-               <div className="font-black text-blue-600 italic text-xl leading-none">P</div>
-               <div className="text-[8px] font-bold text-red-600 leading-none tracking-tighter">PERTAMINA</div>
-               <div className="text-[8px] font-bold text-gray-500 leading-none tracking-tighter">RETAIL</div>
+            <div className="relative w-[130px] h-[130px]">
+               <Image
+                  src={Logo}
+                  alt="Logo Pertamina Retail"
+                  fill
+                  className="object-contain"
+                  priority
+                />
             </div>
           </div>
           <h1 className="text-lg font-bold text-[#1e293b] hidden sm:block">
