@@ -1,7 +1,11 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeModeToggle } from "@/components/themes/theme-mode-toggle";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, Bell } from "lucide-react";
+import Image from "next/image";
 
 function getInitials(nameOrEmail: string | undefined): string {
   if (!nameOrEmail) return "U";
@@ -20,73 +24,94 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ session, isSigningOut, onLogout }: AppHeaderProps) {
+  const [time, setTime] = useState<string>("");
+
+  // Hook untuk jam real-time
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      };
+      setTime(now.toLocaleDateString('en-US', options));
+    };
+
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <header className="sticky top-0 z-20 w-full border-b bg-background/95 backdrop-blur">
-      <div className="container mx-auto px-4 py-3 md:py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         
-        {/* --- Bagian Kiri: Logo & Judul --- */}
-        <div className="flex items-center justify-between md:justify-start gap-3 md:gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg md:text-xl shrink-0">
-              P
-            </div>
-            <div className="flex flex-col leading-tight shrink-0">
-              <span className="font-bold text-xs md:text-sm tracking-widest text-foreground">PERTAMINA</span>
-              <span className="text-[10px] md:text-xs text-red-600 font-semibold tracking-widest">RETAIL</span>
+        {/* --- Kiri: Logo & Branding --- */}
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center">
+             {/* Ganti src dengan path logo Pertamina Retail Anda */}
+            <div className="relative w-12 h-8">
+               <div className="font-black text-blue-600 italic text-xl leading-none">P</div>
+               <div className="text-[8px] font-bold text-red-600 leading-none tracking-tighter">PERTAMINA</div>
+               <div className="text-[8px] font-bold text-gray-500 leading-none tracking-tighter">RETAIL</div>
             </div>
           </div>
+          <h1 className="text-lg font-bold text-[#1e293b] hidden sm:block">
+            Sales Daily Report
+          </h1>
+        </div>
 
-          {/* Garis pemisah vertikal hanya muncul di tablet/desktop */}
-          <div className="h-10 w-px bg-border hidden md:block mx-2"></div>
-          
-          <div className="min-w-0">
-            <h1 className="text-base md:text-lg lg:text-xl font-bold text-foreground truncate">
-              Sales Daily Report
-            </h1>
-            <p className="text-[10px] md:text-xs lg:text-sm text-muted-foreground truncate">
-              Non - Fuel Retail Sales & Operation
-            </p>
-          </div>
+        {/* --- Tengah/Kanan: Real-time Clock --- */}
+        <div className="hidden lg:block flex-1 text-right px-8">
+          <p className="text-sm font-semibold text-gray-700">
+            {time}
+          </p>
         </div>
         
-        {/* --- Bagian Kanan: Profil & Menu --- */}
-        <div className="flex items-center justify-between md:justify-end gap-2 md:gap-4 border-t pt-3 md:border-t-0 md:pt-0">
+        {/* --- Kanan: Actions & Profile --- */}
+        <div className="flex items-center gap-3">
           
-          {/* Info User */}
-          <div className="flex items-center gap-2 rounded-full border px-2 py-1 md:px-2.5 md:py-1.5 bg-muted/40 min-w-0">
-            <Avatar className="h-7 w-7 md:h-8 md:h-8 shrink-0">
+          {/* Theme Toggle */}
+          <ThemeModeToggle />
+
+          {/* Notification Icon */}
+          <div className="relative p-2 rounded-full bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
+            <Bell className="w-5 h-5 text-gray-600" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background"></span>
+          </div>
+
+          {/* User Profile */}
+          <div className="flex items-center gap-3 pl-2 border-l ml-2">
+            <Avatar className="h-9 w-9 border-2 border-blue-500">
               <AvatarImage src={session?.user?.image ?? ""} alt={session?.user?.name ?? "User"} />
-              <AvatarFallback className="text-[10px]">{getInitials(session?.user?.name ?? session?.user?.email)}</AvatarFallback>
+              <AvatarFallback className="bg-blue-600 text-white font-bold">
+                {getInitials(session?.user?.name ?? session?.user?.email)}
+              </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col leading-tight min-w-0 pr-1">
-              <span className="text-[10px] md:text-xs font-medium text-foreground truncate max-w-[80px] md:max-w-[120px]">
-                {session?.user?.name ?? "User"}
-              </span>
-              <span className="text-[9px] md:text-[11px] text-muted-foreground truncate max-w-[80px] md:max-w-[120px]">
-                {session?.user?.email ?? "Memuat..."}
+            <div className="hidden md:flex flex-col text-left">
+              <span className="text-sm font-bold text-gray-800">
+                {session?.user?.name ?? "Admin User"}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <ThemeModeToggle />
-            
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onLogout}
-              disabled={isSigningOut}
-              className="h-8 md:h-9 px-2 md:px-3 gap-1 md:gap-2"
-            >
-              {isSigningOut ? (
-                <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
-              ) : (
-                <LogOut className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              )}
-              <span className="text-xs md:text-sm">Logout</span>
-            </Button>
-          </div>
+          {/* Logout (Optional, if you want to keep it visible) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onLogout}
+            disabled={isSigningOut}
+            className="text-gray-500 hover:text-red-600"
+          >
+            {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {!isSigningOut && <span className="text-[10px] font-bold">OUT</span>}
+          </Button>
         </div>
 
       </div>
