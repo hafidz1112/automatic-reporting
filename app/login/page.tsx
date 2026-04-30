@@ -32,7 +32,7 @@ export default function LoginPage() {
     try {
       const result = await signIn.email({
         email: email.trim(),
-        password,
+        password
       });
 
       if (result.error) {
@@ -42,7 +42,7 @@ export default function LoginPage() {
 
       const sessionResponse = await fetch("/api/auth/get-session", {
         method: "GET",
-        credentials: "include",
+        credentials: "include"
       });
       const sessionPayload = sessionResponse.ok
         ? await sessionResponse.json()
@@ -62,19 +62,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9F9F9] p-4 text-[#333]">
-      
       {/* Kartu Login */}
       <div className="w-full max-w-[420px] bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-8">
-        
         {/* Header Logo & Slogan */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative w-40 h-12 mb-4">
-            <Image 
-              src="/logo-pertamina-retail.png" 
-              alt="Pertamina Retail Logo" 
-              fill 
-              className="object-contain" 
-              priority 
+            <Image
+              src="/logo-pertamina-retail.png"
+              alt="Pertamina Retail Logo"
+              fill
+              className="object-contain"
+              priority
             />
           </div>
           <h2 className="font-bold text-base text-[#333] mb-1">
@@ -106,22 +104,28 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <div className="flex justify-between">
-              <Label className="text-sm font-semibold text-[#333]">Password</Label>
-              
+              <Label className="text-sm font-semibold text-[#333]">
+                Password
+              </Label>
             </div>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 value={password}
+                placeholder="Enter your password"
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-10 rounded border-[#ccc] focus:border-[#E31D2B] focus:ring-1 focus:ring-[#E31D2B]"
               />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)} 
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-2.5 text-gray-400"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -141,7 +145,9 @@ export default function LoginPage() {
         <div className="text-center text-sm mt-6">
           <p className="text-[#666]">
             Don't have an account?{" "}
-            <button className="text-[#333] font-semibold underline">Sign up</button>
+            <button className="text-[#333] font-semibold underline">
+              Sign up
+            </button>
           </p>
         </div>
       </div>
