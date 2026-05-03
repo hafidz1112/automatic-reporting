@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, Loader2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { apiClient } from "@/lib/api-client";
 import { signOut } from "@/lib/auth-client";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -25,6 +25,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ReportsManagement } from "./reports-management";
+
+// --- Types & Helpers ---
 
 type AnalyticsResponse = {
   summary: {
@@ -64,14 +66,14 @@ const dateFormat = new Intl.DateTimeFormat("id-ID", {
 
 function parseChartDate(value: string): Date {
   const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/;
-
   if (dateOnlyMatch.test(value)) {
     const [year, month, day] = value.split("-").map(Number);
     return new Date(year, month - 1, day);
   }
-
   return new Date(value);
 }
+
+// --- Main Component ---
 
 export function AdminDashboardTabs() {
   const router = useRouter();
@@ -83,14 +85,11 @@ export function AdminDashboardTabs() {
 
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const analyticsResult = await apiClient<AnalyticsResponse>(
-          "/dashboard/analytics"
-        );
+        const analyticsResult = await apiClient<AnalyticsResponse>("/dashboard/analytics");
         if (!mounted) return;
         setAnalytics(analyticsResult);
       } catch {
@@ -100,11 +99,8 @@ export function AdminDashboardTabs() {
         if (mounted) setLoading(false);
       }
     }
-
     void load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const chartData = useMemo(() => {
@@ -112,7 +108,6 @@ export function AdminDashboardTabs() {
     const today = new Date();
     const endDate = new Date(today);
     endDate.setHours(23, 59, 59, 999);
-
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - 6);
     startDate.setHours(0, 0, 0, 0);
@@ -126,9 +121,7 @@ export function AdminDashboardTabs() {
           label: dateFormat.format(date)
         };
       })
-      .filter(
-        (item) => item.parsedDate >= startDate && item.parsedDate <= endDate
-      )
+      .filter((item) => item.parsedDate >= startDate && item.parsedDate <= endDate)
       .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
       .map(({ parsedDate, ...item }) => item);
   }, [analytics]);
@@ -148,159 +141,164 @@ export function AdminDashboardTabs() {
     <PageContainer
       scrollable
       pageTitle="Dashboard"
-      pageDescription="Analitik laporan harian dan total pesan WA terkirim."
+      pageDescription="Analitik laporan harian."
       pageHeaderAction={
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Button asChild className="w-full sm:w-auto">
-            <a href="/api/dashboard/export-csv">
-              <Download className="mr-2 h-4 w-4" />
-              Export to CSV
-            </a>
-          </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="destructive"
             onClick={onLogout}
             disabled={isSigningOut}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto order-1 sm:order-2"
           >
-            {isSigningOut ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <LogOut className="mr-2 h-4 w-4" />
-            )}
+            {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
             Logout
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto order-2 sm:order-1">
+            <a href="/api/dashboard/export-csv">
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </a>
           </Button>
         </div>
       }
     >
-      {loading ? (
-        <div className="flex min-h-75 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
-      ) : error ? (
-        <Card>
-          <CardContent className="pt-6 text-sm text-red-500">
-            {error}
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs defaultValue="analytics" className="space-y-4">
-          <div className="mb-1 overflow-x-auto pb-1">
-            <TabsList className="inline-flex h-auto min-w-full items-stretch gap-1 sm:min-w-0">
-              <TabsTrigger
-                value="analytics"
-                className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
-              >
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
-              >
-                Laporan Harian
-              </TabsTrigger>
-            </TabsList>
+      <div className="flex flex-col w-full max-w-full overflow-x-hidden">
+        {loading ? (
+          <div className="flex min-h-[400px] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-          <TabsContent value="analytics" className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:gap-4 xl:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Harian</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {currency.format(analytics?.summary.totalSalesToday ?? 0)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Berdasarkan laporan masuk hari ini.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Laporan Hari Ini</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {analytics?.summary.totalReportsToday ?? 0}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Jumlah report yang dibuat hari ini.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Pesan Terkirim</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {analytics?.summary.totalMessagesSent ?? 0}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Akumulasi laporan yang sudah dikirim ke WA.
-                </CardContent>
-              </Card>
+        ) : error ? (
+          <Card className="border-destructive mx-auto max-w-md">
+            <CardContent className="pt-6 text-center text-sm text-destructive">{error}</CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="analytics" className="w-full space-y-6">
+            <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="reports">Laporan</TabsTrigger>
+              </TabsList>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Chart Analytics 7 Hari Terakhir</CardTitle>
-                <CardDescription>
-                  Tren total sales dan jumlah laporan per hari (termasuk hari
-                  ini).
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-55 w-full sm:h-65 md:h-80"
-                >
-                  <BarChart
-                    data={chartData}
-                    margin={
-                      isMobile
-                        ? { top: 8, right: 4, left: 4, bottom: 0 }
-                        : { top: 12, right: 12, left: 4, bottom: 0 }
-                    }
-                    barCategoryGap={isMobile ? "24%" : "18%"}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      interval={isMobile ? 1 : 0}
-                      minTickGap={isMobile ? 22 : 14}
-                      tick={{ fontSize: isMobile ? 10 : 12 }}
-                    />
-                    <YAxis
-                      hide={isMobile}
-                      tickLine={false}
-                      axisLine={false}
-                      width={56}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="totalSales"
-                      fill="var(--color-totalSales)"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={isMobile ? 18 : 26}
-                    />
-                    <Bar
-                      dataKey="reports"
-                      fill="var(--color-reports)"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={isMobile ? 18 : 26}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="reports" className="space-y-4">
-            <ReportsManagement />
-          </TabsContent>
-        </Tabs>
-      )}
+            <TabsContent value="analytics" className="space-y-6 mt-0">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card className="min-w-0">
+                  <CardHeader className="p-4 pb-2">
+                    <CardDescription className="text-xs font-medium uppercase truncate">Total Harian</CardDescription>
+                    <CardTitle className="text-xl font-bold truncate">
+                      {currency.format(analytics?.summary.totalSalesToday ?? 0)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
+                    Berdasarkan laporan hari ini.
+                  </CardContent>
+                </Card>
+
+                <Card className="min-w-0">
+                  <CardHeader className="p-4 pb-2">
+                    <CardDescription className="text-xs font-medium uppercase truncate">Laporan Hari Ini</CardDescription>
+                    <CardTitle className="text-xl font-bold">
+                      {analytics?.summary.totalReportsToday ?? 0}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
+                    Jumlah report masuk.
+                  </CardContent>
+                </Card>
+
+                <Card className="min-w-0 sm:col-span-2 lg:col-span-1">
+                  <CardHeader className="p-4 pb-2">
+                    <CardDescription className="text-xs font-medium uppercase truncate">Total Pesan WA</CardDescription>
+                    <CardTitle className="text-xl font-bold">
+                      {analytics?.summary.totalMessagesSent ?? 0}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
+                    Laporan terkirim ke WhatsApp.
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Chart Card - Fully Responsive with ChartContainer */}
+              <Card className="w-full overflow-hidden border-none sm:border">
+                <CardHeader className="px-4 py-4 sm:p-6">
+                  <CardTitle className="text-base sm:text-xl">Tren 7 Hari Terakhir</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 sm:px-6 sm:pb-6">
+                  <ChartContainer config={chartConfig} className="w-full">
+                    <div className="relative w-full" style={{ height: isMobile ? '250px' : '350px' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={chartData}
+                          margin={{ 
+                            top: 10, 
+                            right: isMobile ? 5 : 10, 
+                            left: isMobile ? 0 : 0, 
+                            bottom: isMobile ? 5 : 0 
+                          }}
+                          barCategoryGap={isMobile ? "15%" : "20%"}
+                          barGap={isMobile ? 2 : 4}
+                        >
+                          <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis
+                            dataKey="label"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={isMobile ? 8 : 10}
+                            interval={0}
+                            tick={{ 
+                              fontSize: isMobile ? 9 : 10,
+                              angle: isMobile ? -15 : 0,
+                              textAnchor: isMobile ? "end" : "middle",
+                              dy: isMobile ? 5 : 0
+                            }}
+                            height={isMobile ? 40 : 30}
+                          />
+                          {!isMobile && (
+                            <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 10 }}
+                              tickFormatter={(value) => currency.format(value)}
+                              width={80}
+                            />
+                          )}
+                          <ChartTooltip 
+                            cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                            content={<ChartTooltipContent hideLabel />} 
+                          />
+                          <Bar
+                            dataKey="totalSales"
+                            fill="var(--color-totalSales)"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={isMobile ? 20 : 40}
+                          />
+                          <Bar
+                            dataKey="reports"
+                            fill="var(--color-reports)"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={isMobile ? 20 : 40}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reports" className="mt-0">
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div className="w-full overflow-x-auto">
+                  <ReportsManagement />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
     </PageContainer>
   );
 }
