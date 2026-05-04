@@ -9,8 +9,8 @@ import { cookies } from 'next/headers';
 import Providers from '@/components/layout/providers';
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn Dashboard Starter',
-  description: 'Basic dashboard with Next.js and Shadcn',
+  title: 'Dashboard - Automatic Report System',
+  description: 'Dashboard - Automatic Report System',
   robots: {
     index: false,
     follow: false

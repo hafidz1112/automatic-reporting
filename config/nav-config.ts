@@ -27,6 +27,14 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
+        title: "Stores",
+        url: "/admin/dashboard/stores",
+        icon: "store",
+        shortcut: ["s", "t"],
+        isActive: false,
+        items: []
+      },
+      {
         title: "WhatsApp",
         url: "/admin/dashboard/whatsapp",
         icon: "chat",

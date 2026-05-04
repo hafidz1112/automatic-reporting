@@ -98,6 +98,7 @@ export const dailyReports = pgTable('daily_reports', {
     losses: integer('losses').default(0),
 
     // Lainnya
+    isStoreHealthy: text('is_store_healthy').default('store sehat'),
     needSupport: text('need_support'),
 
     // Status workflow WA

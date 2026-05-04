@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { dailyReports } from "@/db/schema";
+import { dailyReports, users, store } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 function formatDateKey(date: Date): string {
@@ -73,6 +73,18 @@ export async function GET(req: Request) {
       totalSalesYTD:
         sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startOfYear} then ${dailyReports.totalSales} else 0 end), 0)`.as(
           "total_sales_ytd"
+        ),
+      totalSalesGroceriesToday:
+        sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.salesGroceries} else 0 end), 0)`.as(
+          "total_sales_groceries_today"
+        ),
+      totalSalesLpgToday:
+        sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.salesLpg} else 0 end), 0)`.as(
+          "total_sales_lpg_today"
+        ),
+      totalSalesPelumasToday:
+        sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.salesPelumas} else 0 end), 0)`.as(
+          "total_sales_pelumas_today"
         )
     })
     .from(dailyReports)
@@ -106,6 +118,9 @@ export async function GET(req: Request) {
     agg.reports += 1;
     agg.waSent += row.isPushedToWa ? 1 : 0;
   }
+  
+  const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+  const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(store);
 
   const chart = Array.from(mapByDate.values());
 
@@ -132,6 +147,11 @@ export async function GET(req: Request) {
       totalMessagesSent: Number(totals?.totalMessagesSent ?? 0),
       totalSalesMTD: Number(totals?.totalSalesMTD ?? 0),
       totalSalesYTD: Number(totals?.totalSalesYTD ?? 0),
+      totalSalesGroceriesToday: Number(totals?.totalSalesGroceriesToday ?? 0),
+      totalSalesLpgToday: Number(totals?.totalSalesLpgToday ?? 0),
+      totalSalesPelumasToday: Number(totals?.totalSalesPelumasToday ?? 0),
+      totalUsers: Number(userCount?.count ?? 0),
+      totalStores: Number(storeCount?.count ?? 0),
       latestOwnReport: latestReport ?? null
     },
     chart

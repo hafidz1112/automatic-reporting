@@ -1,30 +1,10 @@
 'use client';
 
-/**
- * Fully client-side hook for filtering navigation items based on RBAC
- *
- * All checks are synchronous. No authentication dependency.
- * For actual security (API routes, server actions), always use server-side checks.
- * This is only for UI visibility.
- */
-
 import { useMemo } from 'react';
 import type { NavItem, NavGroup } from '@/types';
 
-/**
- * Hook to filter navigation items based on RBAC (fully client-side)
- *
- * @param items - Array of navigation items to filter
- * @returns Filtered items
- */
 export function useFilteredNavItems(items: NavItem[]) {
-  // const { organization, membership } = useOrganization();
-  // const { user } = useUser();
-
-  // Memoize context and permissions
   const accessContext = useMemo(() => {
-    // const permissions = membership?.permissions || [];
-    // const role = membership?.role;
 
     return {
       organization: undefined,

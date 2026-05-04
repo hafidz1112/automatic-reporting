@@ -86,6 +86,8 @@ export async function POST(req: Request) {
   const pencapaian =
     targetSpd > 0 ? ((totalSales / targetSpd) * 100).toFixed(0) : 0;
 
+  const healthStatus = report.isStoreHealthy === "store tidak sehat" ? "Tidak Sehat 🔴" : "Sehat 🟢";
+  
   // Coba meniru template
   const message = `*Laporan Sales Tanggal ${dateString}*
 
@@ -97,7 +99,7 @@ export async function POST(req: Request) {
   Jam Operasional: ${storeData?.operationalHours || "-"}
   Cluster Harga : ${storeData?.priceCluster || "-"}
   PL Ytd (Data Dummy) : -
-  Kondisi store : *Sehat* 🟢
+  Kondisi store : *${healthStatus}*
 
   *Rincian Sales*
   Groceries Bright  : Rp ${(report.salesGroceries || 0).toLocaleString("id-ID")}

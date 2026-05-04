@@ -32,10 +32,15 @@ import { ReportsManagement } from "./reports-management";
 type AnalyticsResponse = {
   summary: {
     totalSalesToday: number;
+    totalSalesGroceriesToday: number;
+    totalSalesLpgToday: number;
+    totalSalesPelumasToday: number;
     totalReportsToday: number;
     totalMessagesSent: number;
     totalSalesMTD: number;
     totalSalesYTD: number;
+    totalUsers: number;
+    totalStores: number;
   };
   chart: Array<{
     date: string;
@@ -240,7 +245,29 @@ export function AdminDashboardTabs() {
             </div>
           </div>
           <TabsContent value="analytics" className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total User</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {analytics?.summary.totalUsers ?? 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  User terdaftar.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Store</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {analytics?.summary.totalStores ?? 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Store aktif.
+                </CardContent>
+              </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Total Harian</CardDescription>
@@ -250,6 +277,39 @@ export function AdminDashboardTabs() {
                 </CardHeader>
                 <CardContent className="text-xs text-muted-foreground">
                   Berdasarkan laporan masuk hari ini.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Sales Groceries (Hari Ini)</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesGroceriesToday ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Total sales groceries harian.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Sales LPG (Hari Ini)</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesLpgToday ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Total sales LPG harian.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Sales Pelumas (Hari Ini)</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesPelumasToday ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Total sales pelumas harian.
                 </CardContent>
               </Card>
               <Card>
@@ -292,68 +352,77 @@ export function AdminDashboardTabs() {
                     {analytics?.summary.totalMessagesSent ?? 0}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 sm:px-6 sm:pb-6">
-                  <ChartContainer config={chartConfig} className="w-full">
-                    <div className="relative w-full" style={{ height: isMobile ? '250px' : '350px' }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={chartData}
-                          margin={{ 
-                            top: 10, 
-                            right: isMobile ? 5 : 10, 
-                            left: isMobile ? 0 : 0, 
-                            bottom: isMobile ? 5 : 0 
-                          }}
-                          barCategoryGap={isMobile ? "15%" : "20%"}
-                          barGap={isMobile ? 2 : 4}
-                        >
-                          <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
-                          <XAxis
-                            dataKey="label"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={isMobile ? 8 : 10}
-                            interval={0}
-                            tick={{ 
-                              fontSize: isMobile ? 9 : 10,
-                              angle: isMobile ? -15 : 0,
-                              textAnchor: isMobile ? "end" : "middle",
-                              dy: isMobile ? 5 : 0
-                            }}
-                            height={isMobile ? 40 : 30}
-                          />
-                          {!isMobile && (
-                            <YAxis
-                              tickLine={false}
-                              axisLine={false}
-                              tick={{ fontSize: 10 }}
-                              tickFormatter={(value) => currency.format(value)}
-                              width={80}
-                            />
-                          )}
-                          <ChartTooltip 
-                            cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
-                            content={<ChartTooltipContent hideLabel />} 
-                          />
-                          <Bar
-                            dataKey="totalSales"
-                            fill="var(--color-totalSales)"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={isMobile ? 20 : 40}
-                          />
-                          <Bar
-                            dataKey="reports"
-                            fill="var(--color-reports)"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={isMobile ? 20 : 40}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </ChartContainer>
+                <CardContent className="text-xs text-muted-foreground">
+                  Melalui WhatsApp.
                 </CardContent>
               </Card>
             </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Aktivitas 7 Hari Terakhir</CardTitle>
+                <CardDescription>Grafik total sales dan laporan harian</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 sm:px-6 sm:pb-6">
+                <ChartContainer config={chartConfig} className="w-full">
+                  <div className="relative w-full" style={{ height: isMobile ? '250px' : '350px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData}
+                        margin={{ 
+                          top: 10, 
+                          right: isMobile ? 5 : 10, 
+                          left: isMobile ? 0 : 0, 
+                          bottom: isMobile ? 5 : 0 
+                        }}
+                        barCategoryGap={isMobile ? "15%" : "20%"}
+                        barGap={isMobile ? 2 : 4}
+                      >
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis
+                          dataKey="label"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={isMobile ? 8 : 10}
+                          interval={0}
+                          tick={{ 
+                            fontSize: isMobile ? 9 : 10,
+                            angle: isMobile ? -15 : 0,
+                            textAnchor: isMobile ? "end" : "middle",
+                            dy: isMobile ? 5 : 0
+                          }}
+                          height={isMobile ? 40 : 30}
+                        />
+                        {!isMobile && (
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fontSize: 10 }}
+                            tickFormatter={(value) => currency.format(value)}
+                            width={80}
+                          />
+                        )}
+                        <ChartTooltip 
+                          cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                          content={<ChartTooltipContent hideLabel />} 
+                        />
+                        <Bar
+                          dataKey="totalSales"
+                          fill="var(--color-totalSales)"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={isMobile ? 20 : 40}
+                        />
+                        <Bar
+                          dataKey="reports"
+                          fill="var(--color-reports)"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={isMobile ? 20 : 40}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </ChartContainer>
+              </CardContent>
+            </Card>
             </TabsContent>
 
             <TabsContent value="reports" className="mt-0">

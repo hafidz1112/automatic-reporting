@@ -25,6 +25,7 @@ export async function GET(req: Request) {
       email: users.email,
       role: users.role,
       banned: users.banned,
+      storeId: users.storeId,
       storeName: store.name,
       createdAt: users.createdAt,
     })
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, storeId } = body;
     const userId = generateId();
     const dateNow = new Date();
 
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
       email: email,
       emailVerified: true,
       role: role || "kasir",
+      storeId: storeId === "none" ? null : storeId,
       createdAt: dateNow,
       updatedAt: dateNow,
     });
@@ -99,11 +101,17 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json();
-    const { id, name, email, password, role } = body;
+    const { id, name, email, password, role, storeId } = body;
     const dateNow = new Date();
 
     await db.update(users)
-      .set({ name, email, role, updatedAt: dateNow })
+      .set({ 
+        name, 
+        email, 
+        role, 
+        storeId: storeId === "none" ? null : storeId,
+        updatedAt: dateNow 
+      })
       .where(eq(users.id, id));
 
     if (password && password.trim() !== '') {

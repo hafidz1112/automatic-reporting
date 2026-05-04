@@ -21,6 +21,7 @@ export const reportSchema = z.object({
   waste: z.coerce.number().int("Nominal harus angka bulat").min(0).default(0),
   losses: z.coerce.number().int("Nominal harus angka bulat").min(0).default(0),
   
+  isStoreHealthy: z.enum(["store sehat", "store tidak sehat"]).default("store sehat"),
   needSupport: z.string().optional(),
 });
 

@@ -44,6 +44,7 @@ type User = {
   email: string;
   role: string;
   banned: boolean | null;
+  storeId: string | null;
   storeName: string | null;
   createdAt: string;
   status: "Active" | "Blocked";
@@ -64,12 +65,15 @@ export function UserManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+
   // Form states
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "kasir"
+    role: "kasir",
+    storeId: ""
   });
 
   const loadUsers = async () => {
@@ -85,13 +89,23 @@ export function UserManagement() {
     }
   };
 
+  const loadStores = async () => {
+    try {
+      const storesResult = await apiClient<{ id: string; name: string }[]>("/dashboard/stores");
+      setStores(storesResult);
+    } catch (error) {
+      console.error("Failed to fetch stores", error);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadStores();
   }, []);
 
   const handleOpenAdd = () => {
     setEditingUserId(null);
-    setFormData({ name: "", email: "", password: "", role: "kasir" });
+    setFormData({ name: "", email: "", password: "", role: "kasir", storeId: "" });
     setIsDialogOpen(true);
   };
 
@@ -101,7 +115,8 @@ export function UserManagement() {
       name: user.name,
       email: user.email,
       password: "",
-      role: user.role
+      role: user.role,
+      storeId: user.storeId || ""
     });
     setIsDialogOpen(true);
   };
@@ -400,6 +415,31 @@ export function UserManagement() {
                     <SelectContent>
                       <SelectItem value="kasir">Kasir</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+                <Label htmlFor="storeId" className="text-left sm:text-right">
+                  Store
+                </Label>
+                <div className="sm:col-span-3">
+                  <Select
+                    value={formData.storeId}
+                    onValueChange={(val) =>
+                      setFormData({ ...formData, storeId: val })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Tanpa Store</SelectItem>
+                      {stores.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

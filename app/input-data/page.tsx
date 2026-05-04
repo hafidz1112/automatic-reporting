@@ -8,7 +8,6 @@ import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
 import { AppHeader } from "@/components/layout/app-header";
 import { reportSchema, ReportFormValues } from "@/lib/validations/report";
 import { SalesCard } from "@/components/input-data/sales-card";
@@ -18,6 +17,7 @@ import { StockCard } from "@/components/input-data/stock-card";
 import { ShrinkageCard } from "@/components/input-data/shrinkage-card";
 import { SupportCard } from "@/components/input-data/support-card";
 import { signOut, useSession } from "@/lib/auth-client";
+import { RadioHealthStore } from "@/components/input-data/radio-store";
 
 export default function InputDataPage() {
   const router = useRouter();
@@ -60,20 +60,20 @@ export default function InputDataPage() {
     return await response.json();
   };
 
-  const onSaveDraft = async (values: ReportFormValues) => {
-    setIsSaving(true);
-    const toastId = toast.loading("Menyimpan draft...");
-    try {
-      await saveReport(values, false);
-      toast.success("Draft berhasil disimpan!", { id: toastId });
-      reset();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Gagal menyimpan draft";
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // const onSaveDraft = async (values: ReportFormValues) => {
+  //   setIsSaving(true);
+  //   const toastId = toast.loading("Menyimpan draft...");
+  //   try {
+  //     await saveReport(values, false);
+  //     toast.success("Draft berhasil disimpan!", { id: toastId });
+  //     reset();
+  //   } catch (error: unknown) {
+  //     const errorMessage = error instanceof Error ? error.message : "Gagal menyimpan draft";
+  //     toast.error(errorMessage, { id: toastId });
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
 
   const onSubmitWA = async (values: ReportFormValues) => {
     setIsSending(true);
@@ -138,6 +138,7 @@ export default function InputDataPage() {
           <main className="mx-auto mt-1 w-full max-w-7xl px-6 py-6 sm:px-4 md:mt-3 md:px-6 md:py-6 lg:px-8">
             <form className="columns-1 lg:columns-2 gap-6 space-y-6">
               <div className="break-inside-avoid"><SalesCard /></div>
+              <div className="break-inside-avoid"><RadioHealthStore /></div>
               <div className="break-inside-avoid"><StockCard /></div>
               <div className="break-inside-avoid"><OosCard /></div>
               <div className="break-inside-avoid"><ShrinkageCard /></div>

@@ -28,20 +28,25 @@ import { UserAvatarProfile } from '@/components/user-avatar-profile';
 import { navGroups } from '@/config/nav-config';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
+import { authClient } from '@/lib/auth-client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { Icons } from '../icons';
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  image: string;
+}
+
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isOpen } = useMediaQuery();
-  const user = {
-    fullName: 'Admin User',
-    emailAddresses: [{ emailAddress: 'admin@example.com' }],
-    imageUrl: ''
-  };
+  const {data: session} = authClient.useSession()
   const router = useRouter();
+
   const filteredGroups = useFilteredNavGroups(navGroups);
 
   React.useEffect(() => {
@@ -118,11 +123,11 @@ export default function AppSidebar() {
                   size='lg'
                   className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
                 >
-                  {user && (
+                  {session?.user && (
                     <UserAvatarProfile
                       className='h-8 w-8 rounded-lg'
                       showInfo
-                      user={user as any}
+                      user={session.user}
                     />
                   )}
                   <Icons.chevronsDown className='ml-auto size-4' />
@@ -136,11 +141,11 @@ export default function AppSidebar() {
               >
                 <DropdownMenuLabel className='p-0 font-normal'>
                   <div className='px-1 py-1.5'>
-                    {user && (
+                    {session?.user && (
                       <UserAvatarProfile
                         className='h-8 w-8 rounded-lg'
                         showInfo
-                        user={user as any}
+                        user={session.user}
                       />
                     )}
                   </div>
@@ -162,10 +167,17 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/')}>
+                <DropdownMenuItem onClick={async () => {
+                  await authClient.signOut({
+                    fetchOptions : {
+                      onSuccess: () => {
+                        router.push("/login")
+                      }
+                    }
+                  })
+                }}>
                   <Icons.logout className='mr-2 h-4 w-4' />
                   Log out
-                  {/* <SignOutButton redirectUrl='/auth/sign-in' /> */}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
