@@ -353,6 +353,7 @@ export function AdminDashboardTabs() {
                   </ChartContainer>
                 </CardContent>
               </Card>
+            </div>
             </TabsContent>
 
             <TabsContent value="reports" className="mt-0">
@@ -363,8 +364,8 @@ export function AdminDashboardTabs() {
               </div>
             </TabsContent>
           </Tabs>
-        )}
-      </div>
+        )
+      }
     </PageContainer>
-  );
+  )
 }
