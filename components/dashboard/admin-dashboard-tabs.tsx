@@ -23,6 +23,7 @@ import {
   type ChartConfig
 } from "@/components/ui/chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { ReportsManagement } from "./reports-management";
 
@@ -33,6 +34,8 @@ type AnalyticsResponse = {
     totalSalesToday: number;
     totalReportsToday: number;
     totalMessagesSent: number;
+    totalSalesMTD: number;
+    totalSalesYTD: number;
   };
   chart: Array<{
     date: string;
@@ -41,6 +44,8 @@ type AnalyticsResponse = {
     waSent: number;
   }>;
 };
+
+type Store = { id: string; name: string };
 
 const chartConfig: ChartConfig = {
   totalSales: {
@@ -82,14 +87,36 @@ export function AdminDashboardTabs() {
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string>("all");
 
   useEffect(() => {
     let mounted = true;
-    async function load() {
+    async function loadStores() {
+      try {
+        const storesResult = await apiClient<Store[]>("/dashboard/stores");
+        if (!mounted) return;
+        setStores(storesResult);
+      } catch (error) {
+        console.error("Failed to fetch stores", error);
+      }
+    }
+    void loadStores();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAnalytics() {
       setLoading(true);
       setError(null);
       try {
-        const analyticsResult = await apiClient<AnalyticsResponse>("/dashboard/analytics");
+        const analyticsResult = await apiClient<AnalyticsResponse>(
+          `/dashboard/analytics?storeId=${selectedStore}`
+        );
         if (!mounted) return;
         setAnalytics(analyticsResult);
       } catch {
@@ -99,9 +126,12 @@ export function AdminDashboardTabs() {
         if (mounted) setLoading(false);
       }
     }
-    void load();
-    return () => { mounted = false; };
-  }, []);
+
+    void loadAnalytics();
+    return () => {
+      mounted = false;
+    };
+  }, [selectedStore]);
 
   const chartData = useMemo(() => {
     const source = analytics?.chart ?? [];
@@ -163,68 +193,104 @@ export function AdminDashboardTabs() {
         </div>
       }
     >
-      <div className="flex flex-col w-full max-w-full overflow-x-hidden">
-        {loading ? (
-          <div className="flex min-h-[400px] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : error ? (
-          <Card className="border-destructive mx-auto max-w-md">
-            <CardContent className="pt-6 text-center text-sm text-destructive">{error}</CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue="analytics" className="w-full space-y-6">
-            <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="reports">Laporan</TabsTrigger>
+      {loading ? (
+        <div className="flex min-h-75 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-red-500">
+            {error}
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="analytics" className="space-y-4">
+          <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="overflow-x-auto pb-1 max-w-full">
+              <TabsList className="inline-flex h-auto items-stretch gap-1">
+                <TabsTrigger
+                  value="analytics"
+                  className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
+                >
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reports"
+                  className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
+                >
+                  Laporan Harian
+                </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="analytics" className="space-y-6 mt-0">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Card className="min-w-0">
-                  <CardHeader className="p-4 pb-2">
-                    <CardDescription className="text-xs font-medium uppercase truncate">Total Harian</CardDescription>
-                    <CardTitle className="text-xl font-bold truncate">
-                      {currency.format(analytics?.summary.totalSalesToday ?? 0)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
-                    Berdasarkan laporan hari ini.
-                  </CardContent>
-                </Card>
-
-                <Card className="min-w-0">
-                  <CardHeader className="p-4 pb-2">
-                    <CardDescription className="text-xs font-medium uppercase truncate">Laporan Hari Ini</CardDescription>
-                    <CardTitle className="text-xl font-bold">
-                      {analytics?.summary.totalReportsToday ?? 0}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
-                    Jumlah report masuk.
-                  </CardContent>
-                </Card>
-
-                <Card className="min-w-0 sm:col-span-2 lg:col-span-1">
-                  <CardHeader className="p-4 pb-2">
-                    <CardDescription className="text-xs font-medium uppercase truncate">Total Pesan WA</CardDescription>
-                    <CardTitle className="text-xl font-bold">
-                      {analytics?.summary.totalMessagesSent ?? 0}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 text-[10px] text-muted-foreground">
-                    Laporan terkirim ke WhatsApp.
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Chart Card - Fully Responsive with ChartContainer */}
-              <Card className="w-full overflow-hidden border-none sm:border">
-                <CardHeader className="px-4 py-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-xl">Tren 7 Hari Terakhir</CardTitle>
+            <div className="w-full sm:w-[220px]">
+              <Select value={selectedStore} onValueChange={setSelectedStore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Store" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Store</SelectItem>
+                  {stores.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <TabsContent value="analytics" className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Harian</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesToday ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Berdasarkan laporan masuk hari ini.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Sales MTD</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesMTD ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Bulan ini.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Sales YTD</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {currency.format(analytics?.summary.totalSalesYTD ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Tahun ini.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Laporan Hari Ini</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {analytics?.summary.totalReportsToday ?? 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  Jumlah report yang dibuat hari ini.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Total Pesan Terkirim</CardDescription>
+                  <CardTitle className="text-2xl">
+                    {analytics?.summary.totalMessagesSent ?? 0}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 sm:px-6 sm:pb-6">
                   <ChartContainer config={chartConfig} className="w-full">
