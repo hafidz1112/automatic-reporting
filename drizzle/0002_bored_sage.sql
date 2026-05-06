@@ -1,1 +1,0 @@
-ALTER TABLE "daily_reports" ADD COLUMN "is_store_healthy" text DEFAULT 'store sehat';

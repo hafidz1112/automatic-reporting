@@ -179,7 +179,7 @@ export function WhatsAppManagement() {
             <div className="text-sm text-red-500 mb-4">{error}</div>
           ) : null}
 
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 hidden">
             {devices.map((dev) => (
               <div key={dev.device} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -228,7 +228,7 @@ export function WhatsAppManagement() {
             )}
           </div>
 
-          <div className="hidden overflow-x-auto rounded-md border md:block">
+          <div className="overflow-x-auto rounded-md border">
             <Table className="min-w-175 lg:min-w-full">
               <TableHeader>
                 <TableRow>

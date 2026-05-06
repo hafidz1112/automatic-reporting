@@ -99,9 +99,9 @@ export function AdminDashboardTabs() {
     let mounted = true;
     async function loadStores() {
       try {
-        const storesResult = await apiClient<Store[]>("/dashboard/stores");
+        const storesResult = await apiClient<{ stores: Store[] }>("/dashboard/stores");
         if (!mounted) return;
-        setStores(storesResult);
+        setStores(storesResult.stores);
       } catch (error) {
         console.error("Failed to fetch stores", error);
       }
@@ -190,9 +190,9 @@ export function AdminDashboardTabs() {
             Logout
           </Button>
           <Button asChild variant="outline" className="w-full sm:w-auto order-2 sm:order-1">
-            <a href="/api/dashboard/export-csv">
+            <a href="/api/dashboard/export-stores">
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Excel Store
             </a>
           </Button>
         </div>

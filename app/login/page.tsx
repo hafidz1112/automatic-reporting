@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export default function LoginPage() {
         : null;
       const role = sessionPayload?.user?.role;
 
+      toast.success(`Selamat datang, ${sessionPayload?.user?.name || role}!`);
       router.push(
         role === "admin" ? "/admin/dashboard/overview" : "/input-data"
       );
@@ -141,16 +143,6 @@ export default function LoginPage() {
             {isLoading ? "Loading..." : "Login"}
           </Button>
         </form>
-
-        {/* Footer Link */}
-        <div className="text-center text-sm mt-6">
-          <p className="text-[#666]">
-            Don't have an account?{" "}
-            <button className="text-[#333] font-semibold underline">
-              Sign up
-            </button>
-          </p>
-        </div>
       </div>
 
       {/* Footer Kebijakan */}

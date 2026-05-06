@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Check, User, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import { apiClient } from "@/lib/api-client";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -30,43 +38,70 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 type Store = {
   id: string;
   name: string;
   type: string;
   location: string;
+  seName: string | null;
+  saCount: number | null;
   operationalYear: number | null;
+  operationalHours: string | null;
+  priceCluster: string | null;
   targetSpd: number | null;
   createdAt: string;
+};
+
+type KasirUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  storeId: string | null;
 };
 
 export function StoreManagement() {
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<Store[]>([]);
+  const [kasirUsers, setKasirUsers] = useState<KasirUser[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
-  // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingStoreId, setEditingStoreId] = useState<string | null>(null);
 
-  // Form states
   const [formData, setFormData] = useState({
     name: "",
     type: "Bright Store",
     location: "",
+    targetSpd: 0,
     operationalYear: new Date().getFullYear(),
-    targetSpd: 0
+    operationalHours: "",
+    priceCluster: "",
+    seUserId: "",
+    assignedUserIds: [] as string[]
   });
 
-  const loadStores = async () => {
+  const loadStores = async (p = page) => {
     setLoading(true);
     setError(null);
     try {
-      // Assuming endpoint exists or needs creation
-      const storesResult = await apiClient<Store[]>("/dashboard/stores");
-      setStores(storesResult);
+      const res = await fetch(`/api/dashboard/stores?page=${p}&limit=${limit}`);
+      const json = await res.json();
+      setStores(json.stores || []);
+      setTotalPages(json.pagination?.totalPages || 1);
     } catch {
       setError("Gagal memuat daftar store. Silakan refresh halaman.");
     } finally {
@@ -74,9 +109,35 @@ export function StoreManagement() {
     }
   };
 
+  const loadKasirUsers = async () => {
+    try {
+      const usersResult = await apiClient<{ users: KasirUser[] }>("/dashboard/users");
+      setKasirUsers(usersResult.users.filter(u => u.role === "kasir"));
+    } catch {
+      console.error("Failed to fetch users");
+    }
+  };
+
   useEffect(() => {
-    loadStores();
-  }, []);
+    Promise.all([loadStores(page), loadKasirUsers()]);
+  }, [page]);
+
+  const assignedUsers = kasirUsers.filter(u =>
+    formData.assignedUserIds.includes(u.id)
+  );
+
+  const handleToggleUser = (userId: string) => {
+    setFormData(prev => {
+      const isAssigned = prev.assignedUserIds.includes(userId);
+      const newIds = isAssigned
+        ? prev.assignedUserIds.filter(id => id !== userId)
+        : [...prev.assignedUserIds, userId];
+
+      const newSeUserId = isAssigned && prev.seUserId === userId ? "" : prev.seUserId;
+
+      return { ...prev, assignedUserIds: newIds, seUserId: newSeUserId };
+    });
+  };
 
   const handleOpenAdd = () => {
     setEditingStoreId(null);
@@ -84,20 +145,34 @@ export function StoreManagement() {
       name: "",
       type: "Bright Store",
       location: "",
+      targetSpd: 0,
       operationalYear: new Date().getFullYear(),
-      targetSpd: 0
+      operationalHours: "",
+      priceCluster: "",
+      seUserId: "",
+      assignedUserIds: []
     });
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (store: Store) => {
     setEditingStoreId(store.id);
+    const preAssignedIds = kasirUsers
+      .filter(u => u.storeId === store.id)
+      .map(u => u.id);
+
+    const seUser = kasirUsers.find(u => u.name === store.seName);
+
     setFormData({
       name: store.name,
       type: store.type,
       location: store.location,
+      targetSpd: store.targetSpd || 0,
       operationalYear: store.operationalYear || new Date().getFullYear(),
-      targetSpd: store.targetSpd || 0
+      operationalHours: store.operationalHours || "",
+      priceCluster: store.priceCluster || "",
+      seUserId: seUser?.id || "",
+      assignedUserIds: preAssignedIds
     });
     setIsDialogOpen(true);
   };
@@ -112,7 +187,8 @@ export function StoreManagement() {
       const data = await res.json();
       if (data.success) {
         toast.success("Store berhasil dihapus.");
-        loadStores();
+        loadStores(page);
+        loadKasirUsers();
       } else {
         toast.error(data.error || "Gagal menghapus store.");
       }
@@ -126,16 +202,26 @@ export function StoreManagement() {
     setIsSaving(true);
 
     try {
+      const body = {
+        name: formData.name,
+        type: formData.type,
+        location: formData.location,
+        targetSpd: formData.targetSpd,
+        operationalYear: formData.operationalYear,
+        operationalHours: formData.operationalHours,
+        priceCluster: formData.priceCluster,
+        seUserId: formData.seUserId || null,
+        assignedUserIds: formData.assignedUserIds
+      };
+
       const url = "/api/dashboard/stores";
       const method = editingStoreId ? "PUT" : "POST";
-      const body = editingStoreId
-        ? { ...formData, id: editingStoreId }
-        : formData;
+      const payload = editingStoreId ? { ...body, id: editingStoreId } : body;
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -147,7 +233,8 @@ export function StoreManagement() {
             : "Store berhasil ditambahkan."
         );
         setIsDialogOpen(false);
-        loadStores();
+        loadStores(page);
+        loadKasirUsers();
       } else {
         toast.error(data.error || "Gagal menyimpan detail store.");
       }
@@ -186,8 +273,11 @@ export function StoreManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Store</TableHead>
+                  <TableHead>SE Name</TableHead>
+                  <TableHead>SA Count</TableHead>
                   <TableHead>Lokasi</TableHead>
                   <TableHead>Tipe</TableHead>
+                  <TableHead>Jam Operasional</TableHead>
                   <TableHead>Target SPD</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -199,10 +289,19 @@ export function StoreManagement() {
                       {store.name}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
+                      {store.seName || "-"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {store.saCount ?? "-"} org
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {store.location}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {store.type}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {store.operationalHours || "-"}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(store.targetSpd || 0)}
@@ -230,7 +329,7 @@ export function StoreManagement() {
                 ))}
                 {stores.length === 0 && !loading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                       Tidak ada store ditemukan.
                     </TableCell>
                   </TableRow>
@@ -238,17 +337,48 @@ export function StoreManagement() {
               </TableBody>
             </Table>
           </div>
+
+          {totalPages >= 1 && (
+            <div className="mt-4">
+              <Pagination className="justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-125">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingStoreId ? "Edit Store" : "Tambah Store Baru"}
             </DialogTitle>
             <DialogDescription>
-              Lengkapi informasi store di bawah ini.
+              Lengkapi informasi store dan atur kasir yang bertugas.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -296,6 +426,48 @@ export function StoreManagement() {
                 />
               </div>
               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+                <Label htmlFor="spricecluster" className="text-left sm:text-right">
+                  Price Cluster
+                </Label>
+                <Input
+                  id="spricecluster"
+                  value={formData.priceCluster}
+                  onChange={(e) =>
+                    setFormData({ ...formData, priceCluster: e.target.value })
+                  }
+                  className="sm:col-span-3"
+                  placeholder="Contoh: Public, Premium"
+                />
+              </div>
+              <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+                <Label htmlFor="sophours" className="text-left sm:text-right">
+                  Jam Operasional
+                </Label>
+                <Input
+                  id="sophours"
+                  value={formData.operationalHours}
+                  onChange={(e) =>
+                    setFormData({ ...formData, operationalHours: e.target.value })
+                  }
+                  className="sm:col-span-3"
+                  placeholder="Contoh: 24 Jam"
+                />
+              </div>
+              <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+                <Label htmlFor="sopyear" className="text-left sm:text-right">
+                  Tahun Operasional
+                </Label>
+                <Input
+                  id="sopyear"
+                  type="number"
+                  value={formData.operationalYear}
+                  onChange={(e) =>
+                    setFormData({ ...formData, operationalYear: parseInt(e.target.value) || new Date().getFullYear() })
+                  }
+                  className="sm:col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
                 <Label htmlFor="starget" className="text-left sm:text-right">
                   Target SPD
                 </Label>
@@ -309,6 +481,94 @@ export function StoreManagement() {
                   className="sm:col-span-3"
                   required
                 />
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Label className="font-semibold">Kasir yang Ditugaskan</Label>
+                  <Badge variant="secondary" className="ml-auto">
+                    {formData.assignedUserIds.length} orang
+                  </Badge>
+                </div>
+                {kasirUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-3">
+                    Belum ada user dengan role kasir. Buat user terlebih dahulu.
+                  </p>
+                ) : (
+                  <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                    {kasirUsers.map((user) => {
+                      const isAssigned = formData.assignedUserIds.includes(user.id);
+                      const isAssignedElsewhere = user.storeId && user.storeId !== editingStoreId;
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => !isAssignedElsewhere && handleToggleUser(user.id)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition-colors ${
+                            isAssignedElsewhere
+                              ? "opacity-40 cursor-not-allowed bg-muted/30"
+                              : isAssigned
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-muted/50 border border-transparent"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            isAssigned
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-muted-foreground/30"
+                          }`}>
+                            {isAssigned && <Check className="h-3 w-3" />}
+                          </div>
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{user.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          </div>
+                          {isAssignedElsewhere && (
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              Di store lain
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-4 sm:gap-4">
+                <Label htmlFor="seselect" className="text-left sm:text-right">
+                  Pilih SE
+                </Label>
+                <div className="sm:col-span-3">
+                  <Select
+                    value={formData.seUserId}
+                    onValueChange={(val) =>
+                      setFormData({ ...formData, seUserId: val })
+                    }
+                    disabled={assignedUsers.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        assignedUsers.length === 0
+                          ? "Tentukan kasir terlebih dahulu"
+                          : "Pilih SE dari kasir"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignedUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.seUserId && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      SE Name: {assignedUsers.find(u => u.id === formData.seUserId)?.name}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter className="flex-col gap-2 sm:flex-row">

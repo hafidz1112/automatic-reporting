@@ -35,6 +35,14 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
+        title: "Reports",
+        url: "/admin/dashboard/reports",
+        icon: "forms",
+        shortcut: ["r", "r"],
+        isActive: false,
+        items: []
+      },
+      {
         title: "WhatsApp",
         url: "/admin/dashboard/whatsapp",
         icon: "chat",

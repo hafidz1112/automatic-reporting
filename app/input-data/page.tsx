@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -21,36 +21,39 @@ import { RadioHealthStore } from "@/components/input-data/radio-store";
 
 export default function InputDataPage() {
   const router = useRouter();
-  const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { data: session } = useSession();
 
   const methods = useForm<ReportFormValues>({
-    resolver: zodResolver(reportSchema) as any,
+    resolver: zodResolver(reportSchema) as Resolver<ReportFormValues>,
     defaultValues: {
       salesGroceries: 0,
       salesLpg: 0,
       salesPelumas: 0,
       fulfillmentPb: 0,
       avgFulfillmentDc: 0,
-      itemOos: [{ name: "" }, { name: "" }, { name: "" }],
+      itemOos: [],
+      isStoreHealthy: "store sehat",
       stockLpg3kg: 0,
       stockLpg5kg: 0,
       stockLpg12kg: 0,
       waste: 0,
       losses: 0,
-      needSupport: "",
-    },
+      needSupport: ""
+    }
   });
 
   const { handleSubmit, reset } = methods;
 
-  const saveReport = async (values: ReportFormValues, isPushedToWa: boolean) => {
+  const saveReport = async (
+    values: ReportFormValues,
+    isPushedToWa: boolean
+  ) => {
     const response = await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...values, isPushedToWa }),
+      body: JSON.stringify({ ...values, isPushedToWa })
     });
 
     if (!response.ok) {
@@ -91,7 +94,7 @@ export default function InputDataPage() {
       const waResponse = await fetch("/api/send-wa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId }),
+        body: JSON.stringify({ reportId })
       });
 
       if (!waResponse.ok) {
@@ -100,14 +103,17 @@ export default function InputDataPage() {
         try {
           const errorResult = await waResponse.json();
           errorMessage = errorResult.error || errorMessage;
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         throw new Error(errorMessage);
       }
 
       toast.success("Laporan berhasil dikirim ke WhatsApp!", { id: toastId });
       reset();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Gagal mengirim laporan";
+      const errorMessage =
+        error instanceof Error ? error.message : "Gagal mengirim laporan";
       toast.error(errorMessage, { id: toastId });
     } finally {
       setIsSending(false);
@@ -129,21 +135,35 @@ export default function InputDataPage() {
     <TooltipProvider>
       <FormProvider {...methods}>
         <div className="min-h-screen bg-muted/30 pb-36 sm:pb-28 md:pb-24">
-          <AppHeader 
-            session={session} 
-            isSigningOut={isSigningOut} 
-            onLogout={onLogout} 
+          <AppHeader
+            session={session}
+            isSigningOut={isSigningOut}
+            onLogout={onLogout}
           />
 
           <main className="mx-auto mt-1 w-full max-w-7xl px-6 py-6 sm:px-4 md:mt-3 md:px-6 md:py-6 lg:px-8">
             <form className="columns-1 lg:columns-2 gap-6 space-y-6">
-              <div className="break-inside-avoid"><SalesCard /></div>
-              <div className="break-inside-avoid"><RadioHealthStore /></div>
-              <div className="break-inside-avoid"><StockCard /></div>
-              <div className="break-inside-avoid"><OosCard /></div>
-              <div className="break-inside-avoid"><ShrinkageCard /></div>
-              <div className="break-inside-avoid"><DistributionCard /></div>
-              <div className="break-inside-avoid"><SupportCard /></div>
+              <div className="break-inside-avoid">
+                <SalesCard />
+              </div>
+              <div className="break-inside-avoid">
+                <RadioHealthStore />
+              </div>
+              <div className="break-inside-avoid">
+                <StockCard />
+              </div>
+              <div className="break-inside-avoid">
+                <OosCard />
+              </div>
+              <div className="break-inside-avoid">
+                <ShrinkageCard />
+              </div>
+              <div className="break-inside-avoid">
+                <DistributionCard />
+              </div>
+              <div className="break-inside-avoid">
+                <SupportCard />
+              </div>
             </form>
           </main>
 
@@ -151,7 +171,7 @@ export default function InputDataPage() {
             <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-2 sm:grid-cols-1 sm:gap-3">
               <Button
                 onClick={handleSubmit(onSubmitWA)}
-                disabled={isSaving || isSending}
+                disabled={isSending}
                 className="w-full rounded-md border-0 bg-emerald-600 px-4 text-white hover:bg-emerald-700 md:px-8"
               >
                 {isSending ? (

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, eq, isNull } from "drizzle-orm";
+import { desc, eq, isNull, count } from "drizzle-orm";
 import { db } from "@/db";
 import { store, users, account, session as sessionTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -7,6 +7,24 @@ import { hashPassword } from "better-auth/crypto";
 
 function generateId() {
   return "usr_" + Math.random().toString(36).substring(2, 10);
+}
+
+async function syncStoreAssignment(storeId: string | null) {
+  if (!storeId) return;
+
+  const assignedUsers = await db
+    .select({ id: users.id, name: users.name, deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.storeId, storeId));
+
+  const activeUsers = assignedUsers.filter(u => !u.deletedAt);
+
+  await db.update(store)
+    .set({
+      seName: activeUsers.length > 0 ? activeUsers[0].name : null,
+      saCount: activeUsers.length > 0 ? activeUsers.length : null,
+    })
+    .where(eq(store.id, storeId));
 }
 
 export async function GET(req: Request) {
@@ -17,6 +35,20 @@ export async function GET(req: Request) {
   if (session.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+  const offset = (page - 1) * limit;
+
+  const where = isNull(users.deletedAt);
+
+  const [totalResult] = await db
+    .select({ total: count() })
+    .from(users)
+    .where(where);
+
+  const total = Number(totalResult?.total ?? 0);
 
   const rows = await db
     .select({
@@ -30,16 +62,23 @@ export async function GET(req: Request) {
       createdAt: users.createdAt,
     })
     .from(users)
-    .where(isNull(users.deletedAt))
+    .where(where)
     .leftJoin(store, eq(users.storeId, store.id))
-    .orderBy(desc(users.createdAt));
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
 
   return NextResponse.json({
     users: rows.map((row) => ({
       ...row,
       status: row.banned ? "Blocked" : "Active",
     })),
-    total: rows.length,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   });
 }
 
@@ -63,13 +102,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email already exists" }, { status: 400 });
     }
 
+    const targetStoreId = storeId === "none" ? null : storeId;
+
     await db.insert(users).values({
       id: userId,
       name: name,
       email: email,
       emailVerified: true,
       role: role || "kasir",
-      storeId: storeId === "none" ? null : storeId,
+      storeId: targetStoreId,
       createdAt: dateNow,
       updatedAt: dateNow,
     });
@@ -85,6 +126,8 @@ export async function POST(req: Request) {
       createdAt: dateNow,
       updatedAt: dateNow,
     });
+
+    await syncStoreAssignment(targetStoreId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -104,12 +147,19 @@ export async function PUT(req: Request) {
     const { id, name, email, password, role, storeId } = body;
     const dateNow = new Date();
 
+    const oldUser = await db.query.users.findFirst({
+      where: eq(users.id, id)
+    });
+
+    const oldStoreId = oldUser?.storeId || null;
+    const newStoreId = storeId === "none" ? null : storeId;
+
     await db.update(users)
       .set({ 
         name, 
         email, 
         role, 
-        storeId: storeId === "none" ? null : storeId,
+        storeId: newStoreId,
         updatedAt: dateNow 
       })
       .where(eq(users.id, id));
@@ -142,6 +192,13 @@ export async function PUT(req: Request) {
           .where(eq(account.userId, id));
     }
 
+    if (oldStoreId !== newStoreId) {
+      await syncStoreAssignment(oldStoreId);
+      await syncStoreAssignment(newStoreId);
+    } else {
+      await syncStoreAssignment(newStoreId);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating user:", error);
@@ -163,7 +220,12 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Mark as banned and set deletedAt for soft delete
+    const userToDelete = await db.query.users.findFirst({
+      where: eq(users.id, id)
+    });
+
+    const deletedStoreId = userToDelete?.storeId || null;
+
     await db.update(users)
       .set({ 
         banned: true, 
@@ -172,8 +234,9 @@ export async function DELETE(req: Request) {
       })
       .where(eq(users.id, id));
 
-    // Delete sessions to force immediate logout
     await db.delete(sessionTable).where(eq(sessionTable.userId, id));
+
+    await syncStoreAssignment(deletedStoreId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
