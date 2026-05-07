@@ -268,7 +268,41 @@ export function StoreManagement() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-md border">
+          <div className="space-y-3 sm:hidden">
+            {stores.map((store) => (
+              <div key={store.id} className="rounded-lg border p-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{store.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {store.type} - {store.location}
+                  </p>
+                  <p className="text-xs text-muted-foreground">SE: {store.seName || "-"}</p>
+                  <p className="text-xs text-muted-foreground">SA: {store.saCount ?? "-"} org</p>
+                  <p className="text-xs text-muted-foreground">Jam: {store.operationalHours || "-"}</p>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Target: {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(store.targetSpd || 0)}
+                  </p>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(store)} title="Edit">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(store.id, store.name)} title="Hapus">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {stores.length === 0 && !loading && (
+              <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
+                Tidak ada store ditemukan.
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-x-auto rounded-md border hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>

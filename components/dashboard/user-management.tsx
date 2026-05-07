@@ -223,7 +223,7 @@ export function UserManagement() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 hidden">
+          <div className="space-y-3 sm:hidden">
             {(users?.users ?? []).map((user) => (
               <div key={user.id} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -277,7 +277,7 @@ export function UserManagement() {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-md border hidden sm:block">
             <Table className="min-w-195 lg:min-w-full">
               <TableHeader>
                 <TableRow>

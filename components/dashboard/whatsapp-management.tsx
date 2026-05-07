@@ -230,7 +230,7 @@ export function WhatsAppManagement() {
             <div className="text-sm text-red-500 mb-4">{error}</div>
           ) : null}
 
-          <div className="space-y-3 hidden">
+          <div className="space-y-3 sm:hidden">
             {devices.map((dev) => (
               <div key={dev.device} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -279,7 +279,7 @@ export function WhatsAppManagement() {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-md border">
+          <div className="overflow-x-auto rounded-md border hidden sm:block">
             <Table className="min-w-175 lg:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -503,7 +503,21 @@ export function WhatsAppManagement() {
               Fonnte.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <>
+            <div className="space-y-3 sm:hidden">
+              {groups.map((g) => (
+                <div key={g.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-semibold">{g.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground font-mono">{g.groupId}</p>
+                </div>
+              ))}
+              {groups.length === 0 && (
+                <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
+                  Belum ada group. Klik "Sync Groups" untuk mengambil group dari Fonnte.
+                </div>
+              )}
+            </div>
+            <div className="overflow-x-auto rounded-md border hidden sm:block">
               <Table className="min-w-175 lg:min-w-full">
                 <TableHeader>
                   <TableRow>
@@ -522,30 +536,31 @@ export function WhatsAppManagement() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t px-4 py-3">
-                <p className="text-sm text-muted-foreground">
-                  Halaman {groupPage} dari {groupTotalPages}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={groupPage <= 1}
-                    onClick={() => loadGroups(groupPage - 1)}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={groupPage >= groupTotalPages}
-                    onClick={() => loadGroups(groupPage + 1)}
-                  >
-                    Selanjutnya
-                  </Button>
-                </div>
+            </div>
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <p className="text-sm text-muted-foreground">
+                Halaman {groupPage} dari {groupTotalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={groupPage <= 1}
+                  onClick={() => loadGroups(groupPage - 1)}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={groupPage >= groupTotalPages}
+                  onClick={() => loadGroups(groupPage + 1)}
+                >
+                  Selanjutnya
+                </Button>
               </div>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

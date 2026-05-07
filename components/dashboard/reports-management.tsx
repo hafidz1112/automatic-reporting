@@ -151,7 +151,7 @@ export function ReportsManagement() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 hidden">
+        <div className="space-y-3 sm:hidden">
           {reports.map((rep) => (
             <div key={rep.id} className="rounded-lg border p-3">
               <div className="space-y-1">
@@ -193,7 +193,7 @@ export function ReportsManagement() {
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-md border hidden sm:block">
           <Table className="min-w-195 lg:min-w-full">
             <TableHeader>
               <TableRow>
