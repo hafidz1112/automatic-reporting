@@ -121,6 +121,15 @@ export const dailyReports = pgTable("daily_reports", {
   isPushedToWa: boolean("is_pushed_to_wa").default(false)
 });
 
+export const waGroups = pgTable("wa_groups", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  groupId: varchar("group_id", { length: 255 }).notNull().unique(),
+  name: text("name").notNull(),
+  storeId: varchar("store_id", { length: 255 }).references(() => store.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
 export const storeReportSummaries = pgTable(
   "store_report_summaries",
   {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Plus, QrCode, RefreshCcw, Smartphone } from "lucide-react";
+import { Loader2, Plus, QrCode, RefreshCcw, Smartphone, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   Card,
@@ -44,10 +44,23 @@ type GetDevicesResponse = {
   connected: number;
 };
 
+type WaGroup = {
+  id: string;
+  groupId: string;
+  name: string;
+};
+
 export function WhatsAppManagement() {
   const [loading, setLoading] = useState(true);
   const [devices, setDevices] = useState<Device[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Group sync state
+  const [syncing, setSyncing] = useState(false);
+  const [groups, setGroups] = useState<WaGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupPage, setGroupPage] = useState(1);
+  const [groupTotalPages, setGroupTotalPages] = useState(1);
 
   // Add device state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -79,8 +92,46 @@ export function WhatsAppManagement() {
     }
   };
 
+  const loadGroups = async (page = 1) => {
+    setLoadingGroups(true);
+    try {
+      const res = await fetch(`/api/group-wa?page=${page}&pageSize=10`);
+      const json = await res.json();
+      if (json.data) {
+        setGroups(json.data);
+        setGroupPage(json.page);
+        setGroupTotalPages(json.totalPages);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  const handleSyncGroups = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/group-wa", { method: "PATCH" });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(
+          `Berhasil sync ${json.synced?.length || 0} group dari Fonnte!`
+        );
+        loadGroups(1);
+      } else {
+        toast.error(json.error || "Gagal sync group.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Terjadi kesalahan saat sync group.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadDevices();
+    loadGroups(1);
   }, []);
 
   const handleAddDevice = async (e: React.FormEvent) => {
@@ -417,6 +468,87 @@ export function WhatsAppManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Group Management */}
+      <Card className="mt-6">
+        <CardHeader className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <CardTitle>WhatsApp Groups</CardTitle>
+            <CardDescription>
+              Group WhatsApp yang tersedia untuk mengirim laporan.
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleSyncGroups}
+            disabled={syncing}
+            className="w-full sm:w-auto"
+          >
+            {syncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Users className="mr-2 h-4 w-4" />
+            )}
+            Sync Groups
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {loadingGroups ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
+              Belum ada group. Klik "Sync Groups" untuk mengambil group dari
+              Fonnte.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-175 lg:min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Group</TableHead>
+                    <TableHead>Group ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groups.map((g) => (
+                    <TableRow key={g.id}>
+                      <TableCell className="font-medium">{g.name}</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-xs">
+                        {g.groupId}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  Halaman {groupPage} dari {groupTotalPages}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={groupPage <= 1}
+                    onClick={() => loadGroups(groupPage - 1)}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={groupPage >= groupTotalPages}
+                    onClick={() => loadGroups(groupPage + 1)}
+                  >
+                    Selanjutnya
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

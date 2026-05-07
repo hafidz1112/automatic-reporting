@@ -65,6 +65,14 @@ export const reportSchema = z.object({
     .enum(["store sehat", "store tidak sehat"])
     .default("store sehat"),
   needSupport: z.string().optional()
+}).superRefine((data, ctx) => {
+  if (data.salesGroceries === 0 && data.salesLpg === 0 && data.salesPelumas === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Minimal satu sales (Groceries/LPG/Pelumas) harus diisi",
+      path: ["salesGroceries"]
+    });
+  }
 });
 
 export type ReportFormValues = z.infer<typeof reportSchema>;

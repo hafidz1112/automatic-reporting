@@ -249,7 +249,7 @@ export function ReportsManagement() {
 
         {totalPages >= 1 && (
           <div className="mt-4">
-            <Pagination className="justify-end">
+            <Pagination className="justify-center sm:justify-end">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
@@ -257,16 +257,51 @@ export function ReportsManagement() {
                     onClick={() => goToPage(page - 1)}
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <PaginationItem key={p}>
+                <PaginationItem className="hidden sm:list-item">
+                  <PaginationLink
+                    isActive={page === 1}
+                    onClick={() => goToPage(1)}
+                  >
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+                {page > 3 && (
+                  <PaginationItem className="hidden sm:list-item">
+                    <span className="px-2 text-muted-foreground">...</span>
+                  </PaginationItem>
+                )}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => Math.abs(p - page) <= 1 && p > 1 && p < totalPages)
+                  .map((p) => (
+                    <PaginationItem key={p} className="hidden sm:list-item">
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => goToPage(p)}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                {page < totalPages - 2 && (
+                  <PaginationItem className="hidden sm:list-item">
+                    <span className="px-2 text-muted-foreground">...</span>
+                  </PaginationItem>
+                )}
+                {totalPages > 1 && (
+                  <PaginationItem className="hidden sm:list-item">
                     <PaginationLink
-                      isActive={p === page}
-                      onClick={() => goToPage(p)}
+                      isActive={page === totalPages}
+                      onClick={() => goToPage(totalPages)}
                     >
-                      {p}
+                      {totalPages}
                     </PaginationLink>
                   </PaginationItem>
-                ))}
+                )}
+                <PaginationItem className="sm:hidden">
+                  <span className="flex h-9 items-center px-3 text-sm text-muted-foreground">
+                    {page} / {totalPages}
+                  </span>
+                </PaginationItem>
                 <PaginationItem>
                   <PaginationNext
                     disabled={page >= totalPages}

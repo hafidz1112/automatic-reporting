@@ -3,11 +3,10 @@ import { dailyReports, store, storeReportSummaries, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import fs from "fs/promises";
-import path from "path";
 
 const sendWaSchema = z.object({
-  reportId: z.string()
+  reportId: z.string(),
+  groupIds: z.array(z.string()).optional()
 });
 
 function formatCurrency(value: number) {
@@ -75,6 +74,66 @@ function getMonthLabel(date: Date) {
   });
 }
 
+const WA_TEMPLATE = `*Laporan Sales Tanggal {{ DATE }}*
+(Operational: 06:00 - 24:00)
+
+*Store: {{ STORE_NAME }}*
+* Tahun Oprasional : {{ OPERATIONAL_YEAR }}
+* Nama SE: {{ SE_NAME }}
+* Jumlah Shift : 3 Shift
+* Jumlah SA : {{ SA_COUNT }} orang
+* Jam Operasional: {{ OP_HOURS }}
+* Cluster Harga : {{ PRICE_CLUSTER }}
+* PL Ytd : -
+Kondisi store : *{{ HEALTH_STATUS }}*
+
+*Rincian Sales*
+{{ SALES_DETAILS_LIST }}
+
+*Detail Sales*
+* Groceries: {{ DETAIL_GROCERIES }}
+* Sales LPG: {{ DETAIL_LPG }}
+* Pelumas: {{ DETAIL_PELUMAS }}
+
+*Total Sales (SPD)* : {{ TOTAL_SALES }}
+*Target SPD*: {{ TARGET_SPD }}
+*% Pencapaian Target {{ PENCAPAIAN }}%*
+
+*Info SC & MD*
+* Fulfillment PB terakhir = {{ FULFILLMENT_PB }}
+* Avg Fulfillment DC = {{ AVG_FULFILLMENT_DC }}
+
+*Item OOS Store Fast Moving*
+{{ OOS_ITEMS }}
+
+*Stock LPG hari ini* tanggal {{ DATE }}
+* LPG 3kg : {{ STOCK_LPG_3KG }} tabung
+* LPG 5,5 kg : {{ STOCK_LPG_5_5KG }} tabung
+* LPG 12kg : {{ STOCK_LPG_12KG }} tabung
+
+MTD
+*Pencapaian Sales {{ MTD_LABEL }}*
+* Total Sales MTD : {{ MTD_TOTAL_SALES }}
+* Sales Per Day MTD: {{ MTD_SPD }}
+
+*Monthly SPD:*
+{{ MONTHLY_SPD_LIST }}
+
+*Yearly SPD:*
+{{ YEARLY_SPD_LIST }}
+
+*Shrinkage Management*
+(Losses, waste)
+
+* Waste: Rp {{ WASTE }}
+* Losses: Rp {{ LOSSES }}
+
+*Need Support:*
+{{ NEED_SUPPORT }}
+
+*Semangat! 💪🏻*
+Have a *Bright* Day🌤️`;
+
 function renderTemplate(
   template: string,
   mapping: Record<string, string | number>
@@ -103,7 +162,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { reportId } = parsed.data;
+  const { reportId, groupIds } = parsed.data;
   const userRec = await db.query.users.findFirst({
     where: eq(users.id, session.user.id)
   });
@@ -303,70 +362,40 @@ export async function POST(req: Request) {
     else invalidTargets.push(t);
   });
 
-  // Load template file (template-wa.md) if available and render placeholders.
-  let message = "";
-  try {
-    const tplPath = path.join(process.cwd(), "template-wa.md");
-    const tpl = await fs.readFile(tplPath, "utf8");
+  const mapping: Record<string, string | number> = {
+    DATE: dateString,
+    STORE_NAME: storeData?.name || "-",
+    OPERATIONAL_YEAR: storeData?.operationalYear || "-",
+    SE_NAME: userRec?.name || "-",
+    SA_COUNT: storeData?.saCount || "-",
+    OP_HOURS: storeData?.operationalHours || "-",
+    PRICE_CLUSTER: storeData?.priceCluster || "-",
+    HEALTH_STATUS: healthStatus,
+    SALES_DETAILS_LIST: salesDetailsList || "Belum ada data sales bulan ini",
+    DETAIL_GROCERIES: formatCurrency(report.salesGroceries || 0),
+    DETAIL_LPG: formatCurrency(report.salesLpg || 0),
+    DETAIL_PELUMAS: formatCurrency(report.salesPelumas || 0),
+    MTD_LABEL: mtdSummary.periodLabel,
+    MTD_TOTAL_SALES: formatCurrency(Number(mtdSummary.totalSales ?? 0)),
+    MTD_SPD: formatCurrency(Math.round(mtdSpd)),
+    MONTHLY_SPD_LIST: monthlySpdList || "-",
+    YEARLY_SPD_LIST: yearlySpdList || "-",
+    TOTAL_SALES: formatCurrency(totalSales),
+    TARGET_SPD: formatCurrency(targetSpd),
+    PENCAPAIAN: pencapaian,
+    FULFILLMENT_PB: `${report.fulfillmentPb || 0}%`,
+    AVG_FULFILLMENT_DC: `${report.avgFulfillmentDc || 0}%`,
+    OOS_ITEMS: oosString,
+    STOCK_LPG_3KG: report.stockLpg3kg || 0,
+    STOCK_LPG_5_5KG: report.stockLpg5kg || 0,
+    STOCK_LPG_12KG: report.stockLpg12kg || 0,
+    YTD_LABEL: ytdSummary.periodLabel,
+    WASTE: (report.waste || 0).toLocaleString("id-ID"),
+    LOSSES: (report.losses || 0).toLocaleString("id-ID"),
+    NEED_SUPPORT: report.needSupport || "-"
+  };
 
-    const mapping: Record<string, string | number> = {
-      DATE: dateString,
-      STORE_NAME: storeData?.name || "-",
-      OPERATIONAL_YEAR: storeData?.operationalYear || "-",
-      SE_NAME: userRec?.name || "-",
-      SA_COUNT: storeData?.saCount || "-",
-      OP_HOURS: storeData?.operationalHours || "-",
-      PRICE_CLUSTER: storeData?.priceCluster || "-",
-      HEALTH_STATUS: healthStatus,
-      SALES_DETAILS_LIST: salesDetailsList || "Belum ada data sales bulan ini",
-      DETAIL_GROCERIES: formatCurrency(report.salesGroceries || 0),
-      DETAIL_LPG: formatCurrency(report.salesLpg || 0),
-      DETAIL_PELUMAS: formatCurrency(report.salesPelumas || 0),
-      MTD_LABEL: mtdSummary.periodLabel,
-      MTD_TOTAL_SALES: formatCurrency(Number(mtdSummary.totalSales ?? 0)),
-      MTD_SPD: formatCurrency(Math.round(mtdSpd)),
-      MONTHLY_SPD_LIST: monthlySpdList || "-",
-      YEARLY_SPD_LIST: yearlySpdList || "-",
-      TOTAL_SALES: formatCurrency(totalSales),
-      TARGET_SPD: formatCurrency(targetSpd),
-      PENCAPAIAN: pencapaian,
-      FULFILLMENT_PB: `${report.fulfillmentPb || 0}%`,
-      AVG_FULFILLMENT_DC: `${report.avgFulfillmentDc || 0}%`,
-      OOS_ITEMS: oosString,
-      STOCK_LPG_3KG: report.stockLpg3kg || 0,
-      STOCK_LPG_5_5KG: report.stockLpg5kg || 0,
-      STOCK_LPG_12KG: report.stockLpg12kg || 0,
-      YTD_LABEL: ytdSummary.periodLabel,
-      WASTE: (report.waste || 0).toLocaleString("id-ID"),
-      LOSSES: (report.losses || 0).toLocaleString("id-ID"),
-      NEED_SUPPORT: report.needSupport || "-"
-    };
-
-    const rendered = renderTemplate(tpl, mapping);
-
-    // If template contains no placeholders (rendered === tpl) append a compact auto summary.
-    if (rendered === tpl) {
-      const autoBlock = `\n\n*Auto Summary*\n${mapping.MTD_LABEL}: ${mapping.MTD_TOTAL_SALES}\n${mapping.YTD_LABEL}: ${mapping.YTD_LABEL}`;
-      message = `${rendered}${autoBlock}`;
-    } else {
-      message = rendered;
-    }
-  } catch {
-    // Fallback to a compact autogenerated message.
-    message = `*Laporan Sales Tanggal ${dateString}*\n\n*Store: ${storeData?.name || "-"}*\nTotal Sales: ${formatCurrency(totalSales)}\n${mtdSummary.periodLabel}: ${formatCurrency(Number(mtdSummary.totalSales ?? 0))}\n${ytdSummary.periodLabel}: ${formatCurrency(Number(ytdSummary.totalSales ?? 0))}\n\nItem OOS:\n${oosString}`;
-  }
-
-  //   const message = `*Laporan Sales Tanggal ${dateString}*
-
-  // *Store: ${storeData?.name || "-"}*
-  // Tahun Oprasional : ${storeData?.operationalYear || "-"}
-  // Nama SE: ${storeData?.seName || "-"}
-  // Jumlah Shift : 3 (Default)
-  // Jumlah SA : ${storeData?.saCount || "-"}
-  // Jam Operasional: ${storeData?.operationalHours || "-"}
-  // Cluster Harga : ${storeData?.priceCluster || "-"}
-  // PL Ytd (Data Dummy) : -
-  // Kondisi store : *Sehat* 🟢`;
+  const message = renderTemplate(WA_TEMPLATE, mapping);
 
   try {
     const token = process.env.FONNTE_TOKEN_WA;
