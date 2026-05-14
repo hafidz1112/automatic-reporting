@@ -85,6 +85,14 @@ export async function GET(req: Request) {
       totalSalesPelumasToday:
         sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.salesPelumas} else 0 end), 0)`.as(
           "total_sales_pelumas_today"
+        ),
+      totalWasteToday:
+        sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.waste} else 0 end), 0)`.as(
+          "total_waste_today"
+        ),
+      totalLossesToday:
+        sql<number>`coalesce(sum(case when ${dailyReports.reportDate} >= ${startToday} then ${dailyReports.losses} else 0 end), 0)`.as(
+          "total_losses_today"
         )
     })
     .from(dailyReports)
@@ -94,6 +102,11 @@ export async function GET(req: Request) {
     .select({
       reportDate: dailyReports.reportDate,
       totalSales: dailyReports.totalSales,
+      salesGroceries: dailyReports.salesGroceries,
+      salesLpg: dailyReports.salesLpg,
+      salesPelumas: dailyReports.salesPelumas,
+      waste: dailyReports.waste,
+      losses: dailyReports.losses,
       isPushedToWa: dailyReports.isPushedToWa
     })
     .from(dailyReports)
@@ -102,11 +115,11 @@ export async function GET(req: Request) {
 
   const mapByDate = new Map<
     string,
-    { date: string; totalSales: number; reports: number; waSent: number }
+    { date: string; totalSales: number; salesGroceries: number; salesLpg: number; salesPelumas: number; waste: number; losses: number; reports: number; waSent: number }
   >();
 
   for (const day of getLastNDates(14)) {
-    mapByDate.set(day, { date: day, totalSales: 0, reports: 0, waSent: 0 });
+    mapByDate.set(day, { date: day, totalSales: 0, salesGroceries: 0, salesLpg: 0, salesPelumas: 0, waste: 0, losses: 0, reports: 0, waSent: 0 });
   }
 
   for (const row of rows) {
@@ -115,6 +128,11 @@ export async function GET(req: Request) {
     const agg = mapByDate.get(dateKey);
     if (!agg) continue;
     agg.totalSales += Number(row.totalSales ?? 0);
+    agg.salesGroceries += Number(row.salesGroceries ?? 0);
+    agg.salesLpg += Number(row.salesLpg ?? 0);
+    agg.salesPelumas += Number(row.salesPelumas ?? 0);
+    agg.waste += Number(row.waste ?? 0);
+    agg.losses += Number(row.losses ?? 0);
     agg.reports += 1;
     agg.waSent += row.isPushedToWa ? 1 : 0;
   }
@@ -150,6 +168,8 @@ export async function GET(req: Request) {
       totalSalesGroceriesToday: Number(totals?.totalSalesGroceriesToday ?? 0),
       totalSalesLpgToday: Number(totals?.totalSalesLpgToday ?? 0),
       totalSalesPelumasToday: Number(totals?.totalSalesPelumasToday ?? 0),
+      totalWasteToday: Number(totals?.totalWasteToday ?? 0),
+      totalLossesToday: Number(totals?.totalLossesToday ?? 0),
       totalUsers: Number(userCount?.count ?? 0),
       totalStores: Number(storeCount?.count ?? 0),
       latestOwnReport: latestReport ?? null

@@ -32,6 +32,7 @@ CREATE TABLE "daily_reports" (
 	"stock_lpg_12kg" integer DEFAULT 0,
 	"waste" integer DEFAULT 0,
 	"losses" integer DEFAULT 0,
+	"is_store_healthy" text DEFAULT 'store sehat',
 	"need_support" text,
 	"is_pushed_to_wa" boolean DEFAULT false
 );
@@ -63,6 +64,24 @@ CREATE TABLE "stores" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "store_report_summaries" (
+	"id" varchar(255) PRIMARY KEY NOT NULL,
+	"store_id" varchar(255) NOT NULL,
+	"period_type" text NOT NULL,
+	"period_key" text NOT NULL,
+	"period_label" text NOT NULL,
+	"period_start" timestamp NOT NULL,
+	"period_end" timestamp NOT NULL,
+	"report_count" integer DEFAULT 0 NOT NULL,
+	"total_sales" integer DEFAULT 0 NOT NULL,
+	"sales_groceries" integer DEFAULT 0 NOT NULL,
+	"sales_lpg" integer DEFAULT 0 NOT NULL,
+	"sales_pelumas" integer DEFAULT 0 NOT NULL,
+	"target_spd_snapshot" integer,
+	"last_report_date" timestamp,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "user" (
 	"id" varchar PRIMARY KEY NOT NULL,
 	"name" varchar NOT NULL,
@@ -76,6 +95,7 @@ CREATE TABLE "user" (
 	"banReason" varchar,
 	"banExpires" timestamp,
 	"stores_id" varchar,
+	"deletedAt" timestamp,
 	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
@@ -92,4 +112,6 @@ ALTER TABLE "account" ADD CONSTRAINT "account_userId_user_id_fk" FOREIGN KEY ("u
 ALTER TABLE "daily_reports" ADD CONSTRAINT "daily_reports_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "daily_reports" ADD CONSTRAINT "daily_reports_author_id_user_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user" ADD CONSTRAINT "user_stores_id_stores_id_fk" FOREIGN KEY ("stores_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_report_summaries" ADD CONSTRAINT "store_report_summaries_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user" ADD CONSTRAINT "user_stores_id_stores_id_fk" FOREIGN KEY ("stores_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "store_report_summaries_store_period_unique" ON "store_report_summaries" USING btree ("store_id","period_type","period_key");

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, count, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { dailyReports, store, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -11,23 +11,56 @@ export async function GET(req: Request) {
   }
 
   try {
+    const { searchParams } = new URL(req.url);
+    const storeId = searchParams.get("storeId");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (storeId) {
+      conditions.push(eq(dailyReports.storeId, storeId));
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(dailyReports)
+      .where(where);
+
+    const total = Number(totalResult?.total ?? 0);
+
     const rows = await db
       .select({
         id: dailyReports.id,
         reportDate: dailyReports.reportDate,
         totalSales: dailyReports.totalSales,
+        salesGroceries: dailyReports.salesGroceries,
+        salesLpg: dailyReports.salesLpg,
+        salesPelumas: dailyReports.salesPelumas,
+        isStoreHealthy: dailyReports.isStoreHealthy,
+        targetSpdSnapshot: dailyReports.targetSpdSnapshot,
         isPushedToWa: dailyReports.isPushedToWa,
+        storeId: dailyReports.storeId,
         authorName: users.name,
         storeName: store.name,
       })
       .from(dailyReports)
       .leftJoin(users, eq(dailyReports.authorId, users.id))
       .leftJoin(store, eq(dailyReports.storeId, store.id))
+      .where(where)
       .orderBy(desc(dailyReports.reportDate))
-      .limit(50); // Get latest 50 for performance
+      .limit(limit)
+      .offset(offset);
 
     return NextResponse.json({
       reports: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("Error fetching reports:", error);

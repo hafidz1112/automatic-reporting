@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray, count } from "drizzle-orm";
 import { db } from "@/db";
-import { store } from "@/db/schema";
+import { store, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 function generateId() {
@@ -14,12 +14,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
+  const offset = (page - 1) * limit;
+
+  const [totalResult] = await db
+    .select({ total: count() })
+    .from(store);
+
+  const total = Number(totalResult?.total ?? 0);
+
   const rows = await db
     .select()
     .from(store)
-    .orderBy(desc(store.createdAt));
+    .orderBy(desc(store.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-  return NextResponse.json(rows);
+  return NextResponse.json({
+    stores: rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 }
 
 export async function POST(req: Request) {
@@ -30,19 +51,40 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, type, location, targetSpd } = body;
+    const { name, type, location, targetSpd, operationalYear, operationalHours, priceCluster, seUserId, assignedUserIds } = body;
     const id = generateId();
     const dateNow = new Date();
+
+    let seName: string | null = null;
+    if (seUserId) {
+      const seUser = await db.query.users.findFirst({
+        where: eq(users.id, seUserId)
+      });
+      seName = seUser?.name || null;
+    }
+
+    const saCount = Array.isArray(assignedUserIds) ? assignedUserIds.length : 0;
 
     await db.insert(store).values({
       id,
       name,
       type: type || "Bright Store",
       location,
+      seName,
+      saCount: saCount || null,
+      operationalYear: operationalYear || null,
+      operationalHours: operationalHours || null,
+      priceCluster: priceCluster || null,
       targetSpd: targetSpd || 0,
       createdAt: dateNow,
       updatedAt: dateNow,
     });
+
+    if (Array.isArray(assignedUserIds) && assignedUserIds.length > 0) {
+      await db.update(users)
+        .set({ storeId: id, updatedAt: dateNow })
+        .where(inArray(users.id, assignedUserIds));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -59,18 +101,57 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json();
-    const { id, name, type, location, targetSpd } = body;
+    const { id, name, type, location, targetSpd, operationalYear, operationalHours, priceCluster, seUserId, assignedUserIds } = body;
     const dateNow = new Date();
 
+    let seName: string | null = null;
+    if (seUserId) {
+      const seUser = await db.query.users.findFirst({
+        where: eq(users.id, seUserId)
+      });
+      seName = seUser?.name || null;
+    }
+
+    const saCount = Array.isArray(assignedUserIds) ? assignedUserIds.length : 0;
+
     await db.update(store)
-      .set({ 
-        name, 
-        type, 
-        location, 
-        targetSpd, 
-        updatedAt: dateNow 
+      .set({
+        name,
+        type,
+        location,
+        seName,
+        saCount: saCount || null,
+        operationalYear: operationalYear || null,
+        operationalHours: operationalHours || null,
+        priceCluster: priceCluster || null,
+        targetSpd,
+        updatedAt: dateNow
       })
       .where(eq(store.id, id));
+
+    const oldAssigned = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.storeId, id));
+
+    const oldIds = oldAssigned.map(u => u.id);
+
+    const newIds: string[] = Array.isArray(assignedUserIds) ? assignedUserIds : [];
+
+    const toUnassign = oldIds.filter(oid => !newIds.includes(oid));
+    const toAssign = newIds.filter(nid => !oldIds.includes(nid));
+
+    if (toUnassign.length > 0) {
+      await db.update(users)
+        .set({ storeId: null, updatedAt: dateNow })
+        .where(inArray(users.id, toUnassign));
+    }
+
+    if (toAssign.length > 0) {
+      await db.update(users)
+        .set({ storeId: id, updatedAt: dateNow })
+        .where(inArray(users.id, toAssign));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -92,6 +173,10 @@ export async function DELETE(req: Request) {
     if (!id) {
       return NextResponse.json({ error: "Store ID is required" }, { status: 400 });
     }
+
+    await db.update(users)
+      .set({ storeId: null, updatedAt: new Date() })
+      .where(eq(users.storeId, id));
 
     await db.delete(store).where(eq(store.id, id));
 

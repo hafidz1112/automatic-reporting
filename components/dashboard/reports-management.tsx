@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, RefreshCcw, Send } from "lucide-react";
 import toast from "react-hot-toast";
-import { apiClient } from "@/lib/api-client";
 import {
   Card,
   CardContent,
@@ -20,6 +19,14 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 type ReportItem = {
   id: string;
@@ -35,6 +42,9 @@ export function ReportsManagement() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
   const formatDateTime = (value: string) =>
     new Date(value).toLocaleDateString("id-ID", {
@@ -52,14 +62,15 @@ export function ReportsManagement() {
       maximumFractionDigits: 0
     }).format(value);
 
-  const loadReports = async () => {
+  const loadReports = async (p = page) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/dashboard/reports");
+      const res = await fetch(`/api/dashboard/reports?page=${p}&limit=${limit}`);
       const json = await res.json();
       if (json.reports) {
         setReports(json.reports);
+        setTotalPages(json.pagination?.totalPages || 1);
       } else {
         setError(json.error || "Gagal memuat daftar laporan.");
       }
@@ -71,35 +82,12 @@ export function ReportsManagement() {
   };
 
   useEffect(() => {
-    loadReports();
-  }, []);
+    loadReports(page);
+  }, [page]);
 
-  // const handleResend = async (id: string) => {
-  //   setSendingId(id);
-  //   try {
-  //     // Re-use the existing send-wa API, or create a specific one for admin resending.
-  //     // Assuming send-wa can take an id or we can just show a toast for now.
-  //     // A full implementation would call `/api/send-wa?reportId=${id}` or similar.
-  //     const res = await fetch("/api/send-wa", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ reportId: id, action: "send_wa" })
-  //     });
-  //     const data = await res.json();
-  //     if (data.success) {
-  //       toast.success("Pesan berhasil dikirim ulang ke WhatsApp!");
-  //       loadReports();
-  //     } else {
-  //       toast.error(
-  //         "Berhasil diproses, namun pastikan Fonnte API terkonfigurasi dengan benar."
-  //       );
-  //     }
-  //   } catch {
-  //     toast.error("Terjadi kesalahan saat mengirim pesan.");
-  //   } finally {
-  //     setSendingId(null);
-  //   }
-  // };
+  const goToPage = (p: number) => {
+    if (p >= 1 && p <= totalPages) setPage(p);
+  };
 
   const handleResend = async (id: string) => {
     setSendingId(id);
@@ -107,33 +95,20 @@ export function ReportsManagement() {
     try {
       const res = await fetch("/api/send-wa", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          reportId: id
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId: id })
       });
 
       const data = await res.json();
 
-      // kalau response HTTP gagal
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         toast.error(data.error || "Gagal mengirim WhatsApp");
         return;
       }
 
-      // kalau backend return success false
-      if (!data.success) {
-        toast.error(data.error || "Pengiriman WhatsApp gagal");
-        return;
-      }
-
-      // success
       toast.success("Pesan berhasil dikirim ke WhatsApp!");
       await loadReports();
-    } catch (error) {
-      console.error("SEND WA ERROR:", error);
+    } catch {
       toast.error("Terjadi kesalahan saat mengirim pesan.");
     } finally {
       setSendingId(null);
@@ -167,45 +142,31 @@ export function ReportsManagement() {
         </div>
         <Button
           variant="outline"
-          onClick={loadReports}
+          onClick={() => loadReports(page)}
           disabled={loading}
           className="w-full sm:w-auto"
         >
-          <RefreshCcw
-            className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-          />
+          <RefreshCcw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-3 sm:hidden">
           {reports.map((rep) => (
             <div key={rep.id} className="rounded-lg border p-3">
               <div className="space-y-1">
                 <p className="text-sm font-semibold">{rep.storeName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateTime(rep.reportDate)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Kasir: {rep.authorName}
-                </p>
+                <p className="text-xs text-muted-foreground">{formatDateTime(rep.reportDate)}</p>
+                <p className="text-xs text-muted-foreground">Kasir: {rep.authorName}</p>
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Total Sales
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {formatCurrency(rep.totalSales)}
-                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total Sales</p>
+                  <p className="text-sm font-semibold">{formatCurrency(rep.totalSales)}</p>
                 </div>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    rep.isPushedToWa
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  rep.isPushedToWa ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-800"
+                }`}>
                   {rep.isPushedToWa ? "Terkirim WA" : "Draft Dashboard"}
                 </span>
               </div>
@@ -232,7 +193,7 @@ export function ReportsManagement() {
           )}
         </div>
 
-        <div className="hidden overflow-x-auto rounded-md border md:block">
+        <div className="overflow-x-auto rounded-md border hidden sm:block">
           <Table className="min-w-195 lg:min-w-full">
             <TableHeader>
               <TableRow>
@@ -247,26 +208,14 @@ export function ReportsManagement() {
             <TableBody>
               {reports.map((rep) => (
                 <TableRow key={rep.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDateTime(rep.reportDate)}
-                  </TableCell>
-                  <TableCell className="font-medium whitespace-nowrap">
-                    {rep.storeName}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {rep.authorName}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {formatCurrency(rep.totalSales)}
-                  </TableCell>
+                  <TableCell className="whitespace-nowrap">{formatDateTime(rep.reportDate)}</TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{rep.storeName}</TableCell>
+                  <TableCell className="whitespace-nowrap">{rep.authorName}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">{formatCurrency(rep.totalSales)}</TableCell>
                   <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        rep.isPushedToWa
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      rep.isPushedToWa ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-800"
+                    }`}>
                       {rep.isPushedToWa ? "Terkirim WA" : "Draft Dashboard"}
                     </span>
                   </TableCell>
@@ -297,6 +246,72 @@ export function ReportsManagement() {
             </TableBody>
           </Table>
         </div>
+
+        {totalPages >= 1 && (
+          <div className="mt-4">
+            <Pagination className="justify-center sm:justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    disabled={page <= 1}
+                    onClick={() => goToPage(page - 1)}
+                  />
+                </PaginationItem>
+                <PaginationItem className="hidden sm:list-item">
+                  <PaginationLink
+                    isActive={page === 1}
+                    onClick={() => goToPage(1)}
+                  >
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+                {page > 3 && (
+                  <PaginationItem className="hidden sm:list-item">
+                    <span className="px-2 text-muted-foreground">...</span>
+                  </PaginationItem>
+                )}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => Math.abs(p - page) <= 1 && p > 1 && p < totalPages)
+                  .map((p) => (
+                    <PaginationItem key={p} className="hidden sm:list-item">
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => goToPage(p)}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                {page < totalPages - 2 && (
+                  <PaginationItem className="hidden sm:list-item">
+                    <span className="px-2 text-muted-foreground">...</span>
+                  </PaginationItem>
+                )}
+                {totalPages > 1 && (
+                  <PaginationItem className="hidden sm:list-item">
+                    <PaginationLink
+                      isActive={page === totalPages}
+                      onClick={() => goToPage(totalPages)}
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                <PaginationItem className="sm:hidden">
+                  <span className="flex h-9 items-center px-3 text-sm text-muted-foreground">
+                    {page} / {totalPages}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    disabled={page >= totalPages}
+                    onClick={() => goToPage(page + 1)}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

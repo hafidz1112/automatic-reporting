@@ -5,6 +5,14 @@ import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { apiClient } from "@/lib/api-client";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -52,22 +60,28 @@ type User = {
 
 type UsersResponse = {
   users: User[];
-  total: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UsersResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
-  // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
 
-  // Form states
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -76,12 +90,13 @@ export function UserManagement() {
     storeId: ""
   });
 
-  const loadUsers = async () => {
+  const loadUsers = async (p = page) => {
     setLoading(true);
     setError(null);
     try {
-      const usersResult = await apiClient<UsersResponse>("/dashboard/users");
+      const usersResult = await apiClient<UsersResponse>(`/dashboard/users?page=${p}&limit=${limit}`);
       setUsers(usersResult);
+      setTotalPages(usersResult.pagination?.totalPages || 1);
     } catch {
       setError("Gagal memuat daftar pengguna. Silakan refresh halaman.");
     } finally {
@@ -91,17 +106,17 @@ export function UserManagement() {
 
   const loadStores = async () => {
     try {
-      const storesResult = await apiClient<{ id: string; name: string }[]>("/dashboard/stores");
-      setStores(storesResult);
+      const storesResult = await apiClient<{ stores: { id: string; name: string }[] }>("/dashboard/stores");
+      setStores(storesResult.stores);
     } catch (error) {
       console.error("Failed to fetch stores", error);
     }
   };
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(page);
     loadStores();
-  }, []);
+  }, [page]);
 
   const handleOpenAdd = () => {
     setEditingUserId(null);
@@ -131,7 +146,7 @@ export function UserManagement() {
       const data = await res.json();
       if (data.success) {
         toast.success("Pengguna berhasil dihapus.");
-        loadUsers();
+        loadUsers(page);
       } else {
         toast.error(data.error || "Gagal menghapus pengguna.");
       }
@@ -166,7 +181,7 @@ export function UserManagement() {
             : "Pengguna berhasil ditambahkan."
         );
         setIsDialogOpen(false);
-        loadUsers();
+        loadUsers(page);
       } else {
         toast.error(data.error || "Gagal menyimpan detail pengguna.");
       }
@@ -200,7 +215,7 @@ export function UserManagement() {
           <div>
             <CardTitle>Management Users</CardTitle>
             <CardDescription>
-              Total pengguna: {users?.total ?? 0}
+              Total pengguna: {users?.pagination?.total ?? 0}
             </CardDescription>
           </div>
           <Button onClick={handleOpenAdd} className="w-full sm:w-auto">
@@ -208,7 +223,7 @@ export function UserManagement() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-3 sm:hidden">
             {(users?.users ?? []).map((user) => (
               <div key={user.id} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -262,7 +277,7 @@ export function UserManagement() {
             )}
           </div>
 
-          <div className="hidden overflow-x-auto rounded-md border md:block">
+          <div className="overflow-x-auto rounded-md border hidden sm:block">
             <Table className="min-w-195 lg:min-w-full">
               <TableHeader>
                 <TableRow>
@@ -331,6 +346,72 @@ export function UserManagement() {
               </TableBody>
             </Table>
           </div>
+
+          {totalPages >= 1 && (
+            <div className="mt-4">
+              <Pagination className="justify-center sm:justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                    />
+                  </PaginationItem>
+                  <PaginationItem className="hidden sm:list-item">
+                    <PaginationLink
+                      isActive={page === 1}
+                      onClick={() => setPage(1)}
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                  {page > 3 && (
+                    <PaginationItem className="hidden sm:list-item">
+                      <span className="px-2 text-muted-foreground">...</span>
+                    </PaginationItem>
+                  )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => Math.abs(p - page) <= 1 && p > 1 && p < totalPages)
+                    .map((p) => (
+                      <PaginationItem key={p} className="hidden sm:list-item">
+                        <PaginationLink
+                          isActive={p === page}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                  {page < totalPages - 2 && (
+                    <PaginationItem className="hidden sm:list-item">
+                      <span className="px-2 text-muted-foreground">...</span>
+                    </PaginationItem>
+                  )}
+                  {totalPages > 1 && (
+                    <PaginationItem className="hidden sm:list-item">
+                      <PaginationLink
+                        isActive={page === totalPages}
+                        onClick={() => setPage(totalPages)}
+                      >
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  <PaginationItem className="sm:hidden">
+                    <span className="flex h-9 items-center px-3 text-sm text-muted-foreground">
+                      {page} / {totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 

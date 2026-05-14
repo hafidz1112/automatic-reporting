@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/index";
-import { dailyReports, users } from "@/db/schema";
+import { dailyReports, store, storeReportSummaries, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const storeId = userRec.storeId;
+
     const {
       salesGroceries,
       salesLpg,
@@ -92,11 +94,12 @@ export async function POST(req: NextRequest) {
       Number(salesGroceries) + Number(salesLpg) + Number(salesPelumas);
 
     const newId = "daily" + nanoid(10);
+    const reportDate = new Date();
     const newReport = await db
       .insert(dailyReports)
       .values({
         id: newId,
-        storeId: userRec.storeId,
+        storeId,
         authorId: authorId,
         salesGroceries: Number(salesGroceries),
         salesLpg: Number(salesLpg),
@@ -115,6 +118,114 @@ export async function POST(req: NextRequest) {
         isPushedToWa
       })
       .returning();
+
+    const currentStore = await db.query.store.findFirst({
+      where: eq(store.id, storeId)
+    });
+
+    const refreshSummary = async (
+      periodType: "mtd" | "ytd",
+      periodKey: string,
+      periodLabel: string,
+      periodStart: Date,
+      periodEnd: Date
+    ) => {
+      const [totals] = await db
+        .select({
+          reportCount: sql<number>`count(*)`,
+          totalSales: sql<number>`coalesce(sum(${dailyReports.totalSales}), 0)`,
+          salesGroceries: sql<number>`coalesce(sum(${dailyReports.salesGroceries}), 0)`,
+          salesLpg: sql<number>`coalesce(sum(${dailyReports.salesLpg}), 0)`,
+          salesPelumas: sql<number>`coalesce(sum(${dailyReports.salesPelumas}), 0)`
+        })
+        .from(dailyReports)
+        .where(
+          and(
+            eq(dailyReports.storeId, storeId),
+            gte(dailyReports.reportDate, periodStart),
+            lt(dailyReports.reportDate, periodEnd)
+          )
+        );
+
+      await db
+        .insert(storeReportSummaries)
+        .values({
+          id: `${storeId}-${periodType}-${periodKey}`,
+          storeId,
+          periodType,
+          periodKey,
+          periodLabel,
+          periodStart,
+          periodEnd,
+          reportCount: Number(totals?.reportCount ?? 0),
+          totalSales: Number(totals?.totalSales ?? 0),
+          salesGroceries: Number(totals?.salesGroceries ?? 0),
+          salesLpg: Number(totals?.salesLpg ?? 0),
+          salesPelumas: Number(totals?.salesPelumas ?? 0),
+          targetSpdSnapshot: currentStore?.targetSpd ?? 0,
+          lastReportDate: reportDate,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: [
+            storeReportSummaries.storeId,
+            storeReportSummaries.periodType,
+            storeReportSummaries.periodKey
+          ],
+          set: {
+            periodLabel,
+            periodStart,
+            periodEnd,
+            reportCount: Number(totals?.reportCount ?? 0),
+            totalSales: Number(totals?.totalSales ?? 0),
+            salesGroceries: Number(totals?.salesGroceries ?? 0),
+            salesLpg: Number(totals?.salesLpg ?? 0),
+            salesPelumas: Number(totals?.salesPelumas ?? 0),
+            targetSpdSnapshot: currentStore?.targetSpd ?? 0,
+            lastReportDate: reportDate,
+            updatedAt: new Date()
+          }
+        });
+    };
+
+    const monthKey = `${reportDate.getFullYear()}-${String(reportDate.getMonth() + 1).padStart(2, "0")}`;
+    const yearKey = `${reportDate.getFullYear()}`;
+    const startOfMonth = new Date(
+      reportDate.getFullYear(),
+      reportDate.getMonth(),
+      1
+    );
+    startOfMonth.setHours(0, 0, 0, 0);
+    const startOfNextMonth = new Date(
+      reportDate.getFullYear(),
+      reportDate.getMonth() + 1,
+      1
+    );
+    startOfNextMonth.setHours(0, 0, 0, 0);
+    const startOfYear = new Date(reportDate.getFullYear(), 0, 1);
+    startOfYear.setHours(0, 0, 0, 0);
+    const startOfNextYear = new Date(reportDate.getFullYear() + 1, 0, 1);
+    startOfNextYear.setHours(0, 0, 0, 0);
+
+    const monthLabel = reportDate.toLocaleDateString("id-ID", {
+      month: "long",
+      year: "numeric"
+    });
+
+    await refreshSummary(
+      "mtd",
+      monthKey,
+      `MTD ${monthLabel}`,
+      startOfMonth,
+      startOfNextMonth
+    );
+    await refreshSummary(
+      "ytd",
+      yearKey,
+      `YTD ${reportDate.getFullYear()}`,
+      startOfYear,
+      startOfNextYear
+    );
 
     return NextResponse.json({ success: true, data: newReport[0] });
   } catch (e) {

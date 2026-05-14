@@ -8,6 +8,7 @@ import { apiClient } from "@/lib/api-client";
 import { signOut } from "@/lib/auth-client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageContainer from "@/components/layout/page-container";
+import { ChartPieSimple } from "@/components/ui/chartpie-simple";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +36,8 @@ type AnalyticsResponse = {
     totalSalesGroceriesToday: number;
     totalSalesLpgToday: number;
     totalSalesPelumasToday: number;
+    totalWasteToday: number;
+    totalLossesToday: number;
     totalReportsToday: number;
     totalMessagesSent: number;
     totalSalesMTD: number;
@@ -45,6 +48,11 @@ type AnalyticsResponse = {
   chart: Array<{
     date: string;
     totalSales: number;
+    salesGroceries: number;
+    salesLpg: number;
+    salesPelumas: number;
+    waste: number;
+    losses: number;
     reports: number;
     waSent: number;
   }>;
@@ -57,9 +65,29 @@ const chartConfig: ChartConfig = {
     label: "Total Sales",
     color: "var(--primary)"
   },
+  salesGroceries: {
+    label: "Groceries",
+    color: "var(--chart-1)"
+  },
+  salesLpg: {
+    label: "LPG",
+    color: "var(--chart-2)"
+  },
+  salesPelumas: {
+    label: "Pelumas",
+    color: "var(--chart-3)"
+  },
   reports: {
     label: "Laporan",
-    color: "var(--chart-2)"
+    color: "var(--chart-4)"
+  },
+  waste: {
+    label: "Waste",
+    color: "var(--chart-5)"
+  },
+  losses: {
+    label: "Losses",
+    color: "var(--destructive)"
   }
 };
 
@@ -99,9 +127,9 @@ export function AdminDashboardTabs() {
     let mounted = true;
     async function loadStores() {
       try {
-        const storesResult = await apiClient<Store[]>("/dashboard/stores");
+        const storesResult = await apiClient<{ stores: Store[] }>("/dashboard/stores");
         if (!mounted) return;
-        setStores(storesResult);
+        setStores(storesResult.stores);
       } catch (error) {
         console.error("Failed to fetch stores", error);
       }
@@ -137,6 +165,22 @@ export function AdminDashboardTabs() {
       mounted = false;
     };
   }, [selectedStore]);
+
+  const pieData = useMemo(() => {
+    const totals = (analytics?.chart ?? []).reduce(
+      (acc, d) => ({
+        groceries: acc.groceries + Number(d.salesGroceries ?? 0),
+        lpg: acc.lpg + Number(d.salesLpg ?? 0),
+        pelumas: acc.pelumas + Number(d.salesPelumas ?? 0),
+      }),
+      { groceries: 0, lpg: 0, pelumas: 0 }
+    )
+    return [
+      { name: "Groceries", value: totals.groceries, fill: "var(--chart-1)" },
+      { name: "LPG", value: totals.lpg, fill: "var(--chart-2)" },
+      { name: "Pelumas", value: totals.pelumas, fill: "var(--chart-3)" },
+    ].filter((d) => d.value > 0)
+  }, [analytics])
 
   const chartData = useMemo(() => {
     const source = analytics?.chart ?? [];
@@ -178,21 +222,22 @@ export function AdminDashboardTabs() {
       pageTitle="Dashboard"
       pageDescription="Analitik laporan harian."
       pageHeaderAction={
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <div className="flex w-full gap-2 sm:w-auto">
           <Button
             type="button"
             variant="destructive"
+            size="sm"
             onClick={onLogout}
             disabled={isSigningOut}
-            className="w-full sm:w-auto order-1 sm:order-2"
+            className="flex-1 sm:flex-none order-1 sm:order-2"
           >
-            {isSigningOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-            Logout
+            {isSigningOut ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <LogOut className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />}
+            <span className="text-[11px] sm:text-sm">Logout</span>
           </Button>
-          <Button asChild variant="outline" className="w-full sm:w-auto order-2 sm:order-1">
-            <a href="/api/dashboard/export-csv">
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
+          <Button asChild variant="outline" size="sm" className="flex-1 sm:flex-none order-2 sm:order-1">
+            <a href="/api/dashboard/export-stores">
+              <Download className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-[11px] sm:text-sm">Export Excel</span>
             </a>
           </Button>
         </div>
@@ -215,13 +260,13 @@ export function AdminDashboardTabs() {
               <TabsList className="inline-flex h-auto items-stretch gap-1">
                 <TabsTrigger
                   value="analytics"
-                  className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
+                  className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm"
                 >
                   Analytics
                 </TabsTrigger>
                 <TabsTrigger
                   value="reports"
-                  className="flex-1 px-3 py-2 text-xs sm:flex-none sm:text-sm"
+                  className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-sm"
                 >
                   Laporan Harian
                 </TabsTrigger>
@@ -245,135 +290,174 @@ export function AdminDashboardTabs() {
             </div>
           </div>
           <TabsContent value="analytics" className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total User</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Total User</CardDescription>
+                  <CardTitle className="text-lg sm:text-2xl">
                     {analytics?.summary.totalUsers ?? 0}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   User terdaftar.
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Store</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Total Store</CardDescription>
+                  <CardTitle className="text-lg sm:text-2xl">
                     {analytics?.summary.totalStores ?? 0}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   Store aktif.
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Harian</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Total Harian</CardDescription>
+                  <CardTitle className="text-lg sm:text-2xl truncate">
                     {currency.format(analytics?.summary.totalSalesToday ?? 0)}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   Berdasarkan laporan masuk hari ini.
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Sales Groceries (Hari Ini)</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {currency.format(analytics?.summary.totalSalesGroceriesToday ?? 0)}
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Laporan Hari Ini</CardDescription>
+                  <CardTitle className="text-lg sm:text-2xl">
+                    {analytics?.summary.totalReportsToday ?? 0}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Total sales groceries harian.
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
+                  Jumlah report yang dibuat hari ini.
                 </CardContent>
               </Card>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {pieData.length > 0 && (
+                <div className="lg:col-span-1">
+                  <ChartPieSimple data={pieData} className="h-full" />
+                </div>
+              )}
+              <div className="lg:col-span-2">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>Aktivitas 7 Hari Terakhir</CardTitle>
+                    <CardDescription>Grafik total sales dan laporan harian</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0 sm:px-6 sm:pb-6">
+                    <ChartContainer config={chartConfig} className="w-full">
+                      <div className="relative w-full" style={{ height: isMobile ? '250px' : '260px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={chartData}
+                            margin={{ 
+                              top: 10, 
+                              right: isMobile ? 5 : 10, 
+                              left: isMobile ? 0 : 0, 
+                              bottom: isMobile ? 5 : 0 
+                            }}
+                            barCategoryGap={isMobile ? "15%" : "20%"}
+                            barGap={isMobile ? 2 : 4}
+                          >
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis
+                              dataKey="label"
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={isMobile ? 8 : 10}
+                              interval={0}
+                              tick={{ 
+                                fontSize: isMobile ? 9 : 10,
+                                angle: isMobile ? -15 : 0,
+                                textAnchor: isMobile ? "end" : "middle",
+                                dy: isMobile ? 5 : 0
+                              }}
+                              height={isMobile ? 40 : 30}
+                            />
+                            {!isMobile && (
+                              <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{ fontSize: 10 }}
+                                tickFormatter={(value) => currency.format(value)}
+                                width={80}
+                              />
+                            )}
+                            <ChartTooltip 
+                              cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                              content={<ChartTooltipContent hideLabel />} 
+                            />
+                            <Bar
+                              dataKey="totalSales"
+                              fill="var(--color-totalSales)"
+                              radius={[4, 4, 0, 0]}
+                              maxBarSize={isMobile ? 20 : 40}
+                            />
+                            <Bar
+                              dataKey="reports"
+                              fill="var(--color-reports)"
+                              radius={[4, 4, 0, 0]}
+                              maxBarSize={isMobile ? 20 : 40}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Sales LPG (Hari Ini)</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {currency.format(analytics?.summary.totalSalesLpgToday ?? 0)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Total sales LPG harian.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Sales Pelumas (Hari Ini)</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {currency.format(analytics?.summary.totalSalesPelumasToday ?? 0)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Total sales pelumas harian.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Sales MTD</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Sales MTD</CardDescription>
+                  <CardTitle className="text-base sm:text-2xl truncate">
                     {currency.format(analytics?.summary.totalSalesMTD ?? 0)}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   Bulan ini.
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Sales YTD</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Sales YTD</CardDescription>
+                  <CardTitle className="text-base sm:text-2xl truncate">
                     {currency.format(analytics?.summary.totalSalesYTD ?? 0)}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   Tahun ini.
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Laporan Hari Ini</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {analytics?.summary.totalReportsToday ?? 0}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
-                  Jumlah report yang dibuat hari ini.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Pesan Terkirim</CardDescription>
-                  <CardTitle className="text-2xl">
+                <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+                  <CardDescription className="text-[10px] sm:text-xs">Total Pesan Terkirim</CardDescription>
+                  <CardTitle className="text-base sm:text-2xl">
                     {analytics?.summary.totalMessagesSent ?? 0}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">
+                <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 text-[10px] sm:text-xs text-muted-foreground">
                   Melalui WhatsApp.
                 </CardContent>
               </Card>
             </div>
             <Card>
               <CardHeader>
-                <CardTitle>Aktivitas 7 Hari Terakhir</CardTitle>
-                <CardDescription>Grafik total sales dan laporan harian</CardDescription>
+                <CardTitle>Shrinkage Management</CardTitle>
+                <CardDescription>Waste & Losses 7 hari terakhir</CardDescription>
               </CardHeader>
               <CardContent className="p-0 sm:px-6 sm:pb-6">
                 <ChartContainer config={chartConfig} className="w-full">
-                  <div className="relative w-full" style={{ height: isMobile ? '250px' : '350px' }}>
+                  <div className="relative w-full" style={{ height: isMobile ? '200px' : '260px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={chartData}
-                        margin={{ 
-                          top: 10, 
-                          right: isMobile ? 5 : 10, 
-                          left: isMobile ? 0 : 0, 
-                          bottom: isMobile ? 5 : 0 
-                        }}
+                        margin={{ top: 10, right: isMobile ? 5 : 10, left: isMobile ? 0 : 0, bottom: isMobile ? 5 : 0 }}
                         barCategoryGap={isMobile ? "15%" : "20%"}
                         barGap={isMobile ? 2 : 4}
                       >
@@ -382,41 +466,17 @@ export function AdminDashboardTabs() {
                           dataKey="label"
                           tickLine={false}
                           axisLine={false}
-                          tickMargin={isMobile ? 8 : 10}
+                          tickMargin={isMobile ? 6 : 8}
                           interval={0}
-                          tick={{ 
-                            fontSize: isMobile ? 9 : 10,
-                            angle: isMobile ? -15 : 0,
-                            textAnchor: isMobile ? "end" : "middle",
-                            dy: isMobile ? 5 : 0
-                          }}
-                          height={isMobile ? 40 : 30}
+                          tick={{ fontSize: isMobile ? 9 : 10, angle: isMobile ? -15 : 0, textAnchor: isMobile ? "end" : "middle" }}
+                          height={isMobile ? 35 : 25}
                         />
                         {!isMobile && (
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            tick={{ fontSize: 10 }}
-                            tickFormatter={(value) => currency.format(value)}
-                            width={80}
-                          />
+                          <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10 }} width={60} />
                         )}
-                        <ChartTooltip 
-                          cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
-                          content={<ChartTooltipContent hideLabel />} 
-                        />
-                        <Bar
-                          dataKey="totalSales"
-                          fill="var(--color-totalSales)"
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={isMobile ? 20 : 40}
-                        />
-                        <Bar
-                          dataKey="reports"
-                          fill="var(--color-reports)"
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={isMobile ? 20 : 40}
-                        />
+                        <ChartTooltip cursor={{ fill: 'var(--muted)', opacity: 0.3 }} content={<ChartTooltipContent />} />
+                        <Bar dataKey="waste" fill="var(--color-waste)" radius={[4, 4, 0, 0]} maxBarSize={isMobile ? 20 : 40} />
+                        <Bar dataKey="losses" fill="var(--color-losses)" radius={[4, 4, 0, 0]} maxBarSize={isMobile ? 20 : 40} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

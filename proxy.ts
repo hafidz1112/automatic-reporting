@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const cookieHeader = request.headers.get("cookie") ?? "";
     const sessionResponse = await fetch(new URL("/api/auth/get-session", request.url), {
