@@ -42,7 +42,7 @@ export default function LoginPage() {
         return;
       }
 
-      const sessionResponse = await fetch("/api/auth/get-session", {
+      const sessionResponse = await fetch("/api/auth/session", {
         method: "GET",
         credentials: "include"
       });
