@@ -8,6 +8,7 @@ import { CheckSquare } from "lucide-react";
 import { ReportFormValues } from "@/lib/validations/report";
 import { parseNumberInput } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { RadioHealthStore } from "@/components/input-data/radio-store";
 
 export function DistributionCard() {
   const { control } = useFormContext<ReportFormValues>();
@@ -22,7 +23,9 @@ export function DistributionCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-muted-foreground">Fulfillment PB Terakhir (%)</Label>
+          <Label className="text-muted-foreground">
+            Fulfillment PB Terakhir (%)
+          </Label>
           <Controller
             control={control}
             name="fulfillmentPb"
@@ -33,21 +36,28 @@ export function DistributionCard() {
                   inputMode="numeric"
                   placeholder="0"
                   value={field.value ?? ""}
-                  onChange={(e) => field.onChange(parseNumberInput(e.target.value))}
+                  onChange={(e) =>
+                    field.onChange(parseNumberInput(e.target.value))
+                  }
                   className={cn(
                     "bg-background border-input",
-                    fieldState.error && "border-red-500 focus-visible:ring-red-500"
+                    fieldState.error &&
+                      "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
                 {fieldState.error && (
-                  <p className="text-xs text-red-500 font-medium">{fieldState.error.message}</p>
+                  <p className="text-xs text-red-500 font-medium">
+                    {fieldState.error.message}
+                  </p>
                 )}
               </>
             )}
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-muted-foreground">Avg Fulfillment DC (%)</Label>
+          <Label className="text-muted-foreground">
+            Avg Fulfillment DC (%)
+          </Label>
           <Controller
             control={control}
             name="avgFulfillmentDc"
@@ -58,18 +68,29 @@ export function DistributionCard() {
                   inputMode="numeric"
                   placeholder="0"
                   value={field.value ?? ""}
-                  onChange={(e) => field.onChange(parseNumberInput(e.target.value))}
+                  onChange={(e) =>
+                    field.onChange(parseNumberInput(e.target.value))
+                  }
                   className={cn(
                     "bg-background border-input",
-                    fieldState.error && "border-red-500 focus-visible:ring-red-500"
+                    fieldState.error &&
+                      "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
                 {fieldState.error && (
-                  <p className="text-xs text-red-500 font-medium">{fieldState.error.message}</p>
+                  <p className="text-xs text-red-500 font-medium">
+                    {fieldState.error.message}
+                  </p>
                 )}
               </>
             )}
           />
+        </div>
+        <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            Kondisi Store
+          </p>
+          <RadioHealthStore />
         </div>
       </CardContent>
     </Card>
