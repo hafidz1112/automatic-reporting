@@ -174,8 +174,8 @@ export default function InputDataPage() {
               <SalesCard />
               <ShrinkageCard />
               <StockCard />
-              <DistributionCard />
               <OosCard />
+              <DistributionCard />
               <SupportCard />
             </form>
 
@@ -185,14 +185,14 @@ export default function InputDataPage() {
             <form className="hidden lg:grid grid-cols-2 gap-6 items-stretch">
               {/* Baris 1 */}
               <SalesCard />
-              <DistributionCard /> {/* Mengikuti tinggi SalesCard secara horizontal */}
+              <ShrinkageCard />
               
               {/* Baris 2 */}
-              <OosCard />
               <StockCard />
+              <DistributionCard /> {/* Mengikuti tinggi SalesCard secara horizontal */}
               
               {/* Baris 3 */}
-              <ShrinkageCard />
+              <OosCard />
               <SupportCard />
             </form>
 

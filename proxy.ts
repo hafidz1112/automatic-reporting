@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
   // --- 2. Proteksi Session & Rute ---
   const cookieHeader = request.headers.get("cookie") ?? "";
   const sessionResponse = await fetch(
-    new URL("/api/auth/session", request.url),
+    new URL("/api/auth/get-session", request.url),
     {
       method: "GET",
       headers: {
